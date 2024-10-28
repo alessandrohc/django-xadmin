@@ -615,7 +615,7 @@ class UpdateAdminView(ModelFormAdminView):
 			elif self.has_view_permission():
 				change_list_url = self.model_admin_url('changelist')
 
-				if (list_query := ListQuery(request)) and list_query.get(0) == self.model_info:
+				if (list_query := ListQuery(request)) and list_query.get(0) == list(self.model_info):
 					change_list_url += '?' + list_query.get(1)
 				return change_list_url
 			else:

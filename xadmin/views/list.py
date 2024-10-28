@@ -131,7 +131,7 @@ class ListAdminView(ModelAdminView):
 
 		request = self.request
 
-		ListQuery(request).set((self.model_info, self.request.META['QUERY_STRING']))
+		ListQuery(request).set((list(self.model_info), self.request.META['QUERY_STRING']))
 
 		self.pk_attname = self.opts.pk.attname
 		self.lookup_opts = self.opts
