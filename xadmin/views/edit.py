@@ -616,7 +616,8 @@ class UpdateAdminView(ModelFormAdminView):
 				change_list_url = self.model_admin_url('changelist')
 
 				if (list_query := ListQuery(request)) and list_query.get(0) == list(self.model_info):
-					change_list_url += '?' + list_query.get(1)
+					if query := list_query.get(1):
+						change_list_url += f'?{query}'
 				return change_list_url
 			else:
 				return self.get_admin_url('index')
