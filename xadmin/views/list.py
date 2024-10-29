@@ -16,6 +16,7 @@ from django.core.exceptions import FieldDoesNotExist
 
 from xadmin.util import lookup_field, display_for_field, label_for_field, boolean_icon
 from xadmin.views.base import ModelAdminView, filter_hook, inclusion_tag, csrf_protect_m
+from xadmin.views.utils import ListQuery
 
 # List settings
 ALL_VAR = 'all'
@@ -129,7 +130,8 @@ class ListAdminView(ModelAdminView):
 			raise PermissionDenied
 
 		request = self.request
-		request.session['LIST_QUERY'] = (self.model_info, self.request.META['QUERY_STRING'])
+
+		ListQuery(request).set((list(self.model_info), self.request.META['QUERY_STRING']))
 
 		self.pk_attname = self.opts.pk.attname
 		self.lookup_opts = self.opts

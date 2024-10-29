@@ -23,6 +23,7 @@ from xadmin.layout import FormHelper, Layout, Fieldset, TabHolder, Container, Co
 from xadmin.util import unquote
 from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m
 from xadmin.views.detail import DetailAdminUtil
+from xadmin.views.utils import ListQuery
 
 FORMFIELD_FOR_DBFIELD_DEFAULTS = {
 	models.DateTimeField: {
@@ -613,8 +614,10 @@ class UpdateAdminView(ModelFormAdminView):
 				return request.POST["_redirect"]
 			elif self.has_view_permission():
 				change_list_url = self.model_admin_url('changelist')
-				if 'LIST_QUERY' in self.request.session and self.request.session['LIST_QUERY'][0] == self.model_info:
-					change_list_url += '?' + self.request.session['LIST_QUERY'][1]
+
+				if (list_query := ListQuery(request)) and list_query.get(0) == list(self.model_info):
+					if query := list_query.get(1):
+						change_list_url += f'?{query}'
 				return change_list_url
 			else:
 				return self.get_admin_url('index')
