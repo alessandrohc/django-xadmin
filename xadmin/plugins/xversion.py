@@ -386,14 +386,18 @@ class RevisionListView(BaseReversionView):
 
 	def _get_formset_diffs(self, detail_a, detail_b) -> dict:
 		formset_diffs = defaultdict(list)
-		if not (detail_a.related_versions and detail_b.related_versions):
+
+		related_versions_a = getattr(detail_a, "related_versions", ())
+		related_versions_b = getattr(detail_b, "related_versions", ())
+
+		if not (related_versions_a and related_versions_b):
 			return formset_diffs
 
 		for formset_index, formset_a in enumerate(detail_a.formsets):
 			formset_b = detail_b.formsets[formset_index]
 			try:
-				objs_a = detail_a.related_versions[formset_a.model]
-				objs_b = detail_b.related_versions[formset_b.model]
+				objs_a = related_versions_a[formset_a.model]
+				objs_b = related_versions_b[formset_b.model]
 			except KeyError:
 				continue
 			for form_index, form_a in enumerate(formset_a):
