@@ -285,6 +285,18 @@ class RecoverListView(BaseReversionView):
 			context)
 
 
+class RevisionFormset:
+	def __init__(self, instance):
+		self.instance = instance
+		self.opts = instance._meta
+
+	def __str__(self):
+		return capfirst(self.opts.verbose_name_plural)
+
+	def __hash__(self):
+		return hash(self.instance)
+
+
 class RevisionListView(BaseReversionView):
 	object_history_template = None
 	revision_diff_template = None
@@ -401,8 +413,8 @@ class RevisionListView(BaseReversionView):
 
 				results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
 				                          *(opts.fields + opts.many_to_many))
-				formset_diffs[instance_a].extend(results)
-		return dict(formset_diffs)
+				formset_diffs[instance_a].append(results)
+		return dict([(RevisionFormset(o), v) for o, v in formset_diffs.items()])
 
 	def _get_detail_view(self, obj, init_forms=True):
 		request_method = self.request.method
