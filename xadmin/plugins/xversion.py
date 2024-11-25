@@ -425,7 +425,7 @@ class RevisionListView(BaseReversionView):
 				revision=revision,
 				content_type=ctype
 			)
-			if not is_registered(related_model):
+			if versions.exists() and not is_registered(related_model):
 				# Required to retrieve the updated object.
 				_autoregister(self, related_model)
 
