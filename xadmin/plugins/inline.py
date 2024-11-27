@@ -603,17 +603,22 @@ class InlineFormsetPlugin(BaseAdminPlugin):
 class DetailAdminUtil(DetailAdminView):
 
 	def init_request(self, obj, *args, **kwargs):
-		self.obj = obj
 		self.org_obj = obj
+
+	@property
+	def obj(self):
+		return self.org_obj
 
 
 class DetailInlineFormsetPlugin(InlineFormsetPlugin):
 
 	def get_model_form(self, form, **kwargs):
-		self.formsets = [self._get_detail_formset_instance(
+		self.formsets = formsets = [self._get_detail_formset_instance(
 			inline) for inline in self.inline_instances]
+		self.admin_view.formsets = formsets
 		return form
 
 
 site.register_plugin(InlineFormsetPlugin, ModelFormAdminView)
 site.register_plugin(DetailInlineFormsetPlugin, DetailAdminView)
+site.register_plugin(DetailInlineFormsetPlugin, DetailAdminUtil)

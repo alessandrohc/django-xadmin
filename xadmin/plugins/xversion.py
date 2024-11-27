@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import reversion
 from contextlib import contextmanager
 from functools import partial
@@ -283,6 +285,18 @@ class RecoverListView(BaseReversionView):
 			context)
 
 
+class RevisionFormset:
+	def __init__(self, instance):
+		self.instance = instance
+		self.opts = instance._meta
+
+	def __str__(self):
+		return capfirst(self.opts.verbose_name_plural)
+
+	def __hash__(self):
+		return hash(self.instance)
+
+
 class RevisionListView(BaseReversionView):
 	object_history_template = None
 	revision_diff_template = None
@@ -306,7 +320,7 @@ class RevisionListView(BaseReversionView):
 			for version
 			in self._reversion_order_version_queryset(Version.objects.get_for_object_reference(
 				self.model,
-				self.obj.pk,
+				unquote(self.obj.pk),
 			).select_related("revision__user"))
 		]
 		context.update({
@@ -336,6 +350,105 @@ class RevisionListView(BaseReversionView):
 		return TemplateResponse(self.request, self.object_history_template or
 		                        self.get_template_list('views/model_history.html'), context)
 
+	def _get_diffs(self, obj_a, obj_b, detail_a, detail_b, *fields):
+		list_tuple = (list, tuple)
+		diffs = []
+		for f in fields:
+			if is_related_remote_field(f):
+				field_opts = get_model_opts(f.remote_field.model)
+				if isinstance(f, models.ManyToManyField):
+					label = field_opts.verbose_name_plural
+				else:
+					label = field_opts.verbose_name
+			elif is_related_field(f):
+				label = get_model_opts(f.model).verbose_name
+			else:
+				label = f.verbose_name
+
+			value_a = f.value_from_object(obj_a)
+			value_b = f.value_from_object(obj_b)
+			is_diff = value_a != value_b
+
+			if (isinstance(value_a, list_tuple) and isinstance(value_b, list_tuple)
+					and len(value_a) == len(value_b) and is_diff):
+				is_diff = False
+				for i in range(len(value_a)):
+					if value_a[i] != value_a[i]:
+						is_diff = True
+						break
+			if isinstance(value_a, QuerySet) and isinstance(value_b, QuerySet):
+				is_diff = list(value_a) != list(value_b)
+
+			diffs.append((label, detail_a.get_field_result(f.name).val,
+			              detail_b.get_field_result(f.name).val,
+			              is_diff))
+		return diffs
+
+	def _get_formset_diffs(self, detail_a, detail_b) -> dict:
+		formset_diffs = defaultdict(list)
+
+		related_versions_a = getattr(detail_a, "related_versions", ())
+		related_versions_b = getattr(detail_b, "related_versions", ())
+
+		if not (related_versions_a and related_versions_b):
+			return formset_diffs
+
+		for formset_index, formset_a in enumerate(detail_a.formsets):
+			formset_b = detail_b.formsets[formset_index]
+			try:
+				objs_a = related_versions_a[formset_a.model]
+				objs_b = related_versions_b[formset_b.model]
+			except KeyError:
+				continue
+			for form_index, form_a in enumerate(formset_a):
+				try:
+					instance_a = objs_a[form_index]
+					instance_b = objs_b[form_index]
+				except IndexError:
+					continue
+
+				opts = form_a.detail.opts
+				form_b = formset_b[form_index]
+
+				form_a.instance = instance_a
+				form_b.instance = instance_b
+				form_a.detail.org_obj = instance_a
+				form_b.detail.org_obj = instance_b
+
+				results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
+				                          *(opts.fields + opts.many_to_many))
+				formset_diffs[instance_a].append(results)
+		return dict([(RevisionFormset(o), v) for o, v in formset_diffs.items()])
+
+	def _get_detail_view(self, obj, init_forms=True):
+		request_method = self.request.method
+		try:
+			self.request.method = "GET"
+			detail = self.get_model_view(DetailAdminUtil, self.model, obj)
+			# creates related formsets
+			if init_forms:
+				detail.instance_forms()
+		finally:
+			self.request.method = request_method
+		return detail
+
+	def _get_related_versions(self, revision, obj):
+		related_versions = defaultdict(list)
+		for related_field in obj._meta.related_objects:
+			related_model = related_field.related_model
+			ctype = ContentType.objects.get_for_model(related_model)
+			versions = Version.objects.filter(
+				revision=revision,
+				content_type=ctype
+			)
+			if versions.exists() and not is_registered(related_model):
+				# Required to retrieve the updated object.
+				_autoregister(self, related_model)
+
+			for related_version in versions:
+				related_versions[related_model].append(related_version._object_version.object)
+		return related_versions
+
 	def get_version_object(self, version):
 		obj_version = version._object_version
 		obj = obj_version.object
@@ -347,8 +460,9 @@ class RevisionListView(BaseReversionView):
 				getattr(obj, field.name).set(
 					field.remote_field.model._default_manager.get_queryset().filter(pk__in=pks).all()
 				)
-		detail = self.get_model_view(DetailAdminUtil, self.model, obj)
 
+		detail = self._get_detail_view(obj)
+		detail.related_versions = self._get_related_versions(version.revision, obj)
 		return obj, detail
 
 	def post(self, request, object_id, *args, **kwargs):
@@ -367,52 +481,24 @@ class RevisionListView(BaseReversionView):
 		version_b_id = params['version_b']
 
 		if version_a_id == version_b_id:
-			self.message_user(
-				_("Please select two different versions."), 'error')
+			self.message_user(_("Please select two different versions."), 'error')
 			return self.get_response()
 
 		version_a = get_object_or_404(Version, pk=version_a_id)
 		version_b = get_object_or_404(Version, pk=version_b_id)
 
-		diffs = []
-
 		obj_a, detail_a = self.get_version_object(version_a)
 		obj_b, detail_b = self.get_version_object(version_b)
 
-		for f in (self.opts.fields + self.opts.many_to_many):
-			if is_related_remote_field(f):
-				field_opts = get_model_opts(f.remote_field.model)
-				if isinstance(f, models.ManyToManyField):
-					label = field_opts.verbose_name_plural
-				else:
-					label = field_opts.verbose_name
-			elif is_related_field(f):
-				label = get_model_opts(f.model).verbose_name
-			else:
-				label = f.verbose_name
-
-			value_a = f.value_from_object(obj_a)
-			value_b = f.value_from_object(obj_b)
-			is_diff = value_a != value_b
-
-			if type(value_a) in (list, tuple) and type(value_b) in (list, tuple) \
-					and len(value_a) == len(value_b) and is_diff:
-				is_diff = False
-				for i in range(len(value_a)):
-					if value_a[i] != value_a[i]:
-						is_diff = True
-						break
-			if type(value_a) is QuerySet and type(value_b) is QuerySet:
-				is_diff = list(value_a) != list(value_b)
-
-			diffs.append((label, detail_a.get_field_result(f.name).val,
-			              detail_b.get_field_result(f.name).val,
-			              is_diff))
+		diffs = self._get_diffs(obj_a, obj_b, detail_a, detail_b,
+		                        *(self.opts.fields + self.opts.many_to_many))
+		formset_diffs = self._get_formset_diffs(detail_a, detail_b)
 
 		context = super(RevisionListView, self).get_context()
 		context.update({
 			'object': self.obj,
 			'opts': self.opts,
+			'formset_diffs': formset_diffs,
 			'version_a': version_a,
 			'version_b': version_b,
 			'revision_a_url': self.model_admin_url('revision', quote(version_a.object_id), version_a.id),

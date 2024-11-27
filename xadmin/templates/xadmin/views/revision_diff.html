@@ -1,6 +1,5 @@
 {% extends "xadmin/views/model_form.html" %}
-{% load i18n %}
-
+{% load i18n crispy_forms_tags %}
 {% load xadmin_tags %}
 
 {% block breadcrumbs %}
@@ -47,11 +46,55 @@
           <td class="version-b{%if not diff%} text-muted{% endif %}">{{value_b}}</td>
         </tr>
       {% endfor %}
-        <tr>
-          <th scope="row">{% trans "Revert to" %}</th>
-          <td><a class="btn btn-primary" href="{{revision_a_url}}"><i class="fa fa-undo"></i> {% trans 'Revert' %}</a></td>
-          <td><a class="btn btn-primary" href="{{revision_b_url}}"><i class="fa fa-undo"></i> {% trans 'Revert' %}</a></td>
-        </tr>
+
+      <tr>
+      {% for revision_formset, revision_formset_results in formset_diffs.items %}
+        <th colspan="3">
+          <div class="card">
+            <div class="card-header">{{ revision_formset }}</div>
+            {% for formset_diffs in revision_formset_results %}
+          <div class="card-body">
+            <div class="accordion" id="formset-{{ revision_formset.instance.pk }}">
+              <div class="card">
+                <div class="card-header" id="formset-heading-{{ revision_formset.instance.pk }}">
+                  <h4 class="mb-0">
+                    <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse"
+                            data-target="#formset-collapse-{{ revision_formset.instance.pk }}"
+                            aria-expanded="{{ forloop.first|yesno:'true,false'}}"
+                            aria-controls="formset-collapse-{{ revision_formset.instance.pk }}">
+                      {{ revision_formset.instance }} #{{ forloop.counter }}
+                    </button>
+                  </h4>
+                </div>
+                <div id="formset-collapse-{{ revision_formset.instance.pk }}" class="collapse show"
+                     aria-labelledby="formset-collapse-{{ revision_formset.instance.pk }}"
+                     data-parent="#formset-{{ revision_formset.instance.pk }}">
+                  <div class="card-body">
+                    <table id="change-diff" class="table table-bordered table-hover">
+                    {% for label, value_a, value_b, diff in formset_diffs %}
+                      <tr{%if diff%} class="diff-row table-warning"{% endif %}>
+                        <th scope="row">{{ label }}</th>
+                        <td class="version-a{%if not diff%} text-muted{% endif %}">{{value_a }}</td>
+                        <td class="version-b{%if not diff%} text-muted{% endif %}">{{value_b }}</td>
+                      </tr>
+                    {% endfor %}
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </th>
+        {% endfor %}
+      {% endfor %}
+      </tr>
+
+      <tr>
+        <th scope="row">{% trans "Revert to" %}</th>
+        <td><a class="btn btn-primary" href="{{revision_a_url}}"><i class="fa fa-undo"></i> {% trans 'Revert' %}</a></td>
+        <td><a class="btn btn-primary" href="{{revision_b_url}}"><i class="fa fa-undo"></i> {% trans 'Revert' %}</a></td>
+      </tr>
     </tbody>
   </table>
 </div>
