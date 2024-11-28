@@ -46,50 +46,48 @@
           <td class="version-b{%if not diff%} text-muted{% endif %}">{{value_b}}</td>
         </tr>
       {% endfor %}
-
-      <tr>
+    </tbody>
       {% for revision_formset, revision_formset_results in formset_diffs.items %}
-        <th colspan="3">
-          <div class="card">
-            <div class="card-header">{{ revision_formset }}</div>
-            {% for formset_diffs in revision_formset_results %}
-          <div class="card-body">
-            <div class="accordion" id="formset-{{ revision_formset.instance.pk }}">
-              <div class="card">
-                <div class="card-header" id="formset-heading-{{ revision_formset.instance.pk }}">
-                  <h4 class="mb-0">
-                    <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse"
-                            data-target="#formset-collapse-{{ revision_formset.instance.pk }}"
-                            aria-expanded="{{ forloop.first|yesno:'true,false'}}"
-                            aria-controls="formset-collapse-{{ revision_formset.instance.pk }}">
-                      {{ revision_formset.instance }} #{{ forloop.counter }}
-                    </button>
-                  </h4>
-                </div>
-                <div id="formset-collapse-{{ revision_formset.instance.pk }}" class="collapse show"
-                     aria-labelledby="formset-collapse-{{ revision_formset.instance.pk }}"
-                     data-parent="#formset-{{ revision_formset.instance.pk }}">
-                  <div class="card-body">
-                    <table id="change-diff" class="table table-bordered table-hover">
-                    {% for label, value_a, value_b, diff in formset_diffs %}
-                      <tr{%if diff%} class="diff-row table-warning"{% endif %}>
-                        <th scope="row">{{ label }}</th>
-                        <td class="version-a{%if not diff%} text-muted{% endif %}">{{value_a }}</td>
-                        <td class="version-b{%if not diff%} text-muted{% endif %}">{{value_b }}</td>
-                      </tr>
-                    {% endfor %}
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </div>
-          </div>
-        </th>
-        {% endfor %}
+          <tbody>
+              <tr>
+                  <th colspan="3" data-toggle="collapse" href="#formset-{{ revision_formset.instance.pk }}" role="button" aria-expanded="{{ forloop.first|yesno:'true,false'}}">
+                      {{ revision_formset }}
+                      <span class="collapse-indicator ml-2"><i class="fa-solid fa-sm fa-chevron-right text-primary"></i></span>
+                  </th>
+              </tr>
+          </tbody>
+          {% with has_open=forloop.first %}
+              {% for formset_diffs in revision_formset_results %}
+                  <tbody class="collapse {% if has_open %} show{% endif %}" id="formset-{{ revision_formset.instance.pk }}">
+                  {% if revision_formset_results|length > 1 %}
+                          <tr>
+                              <th colspan="3" class="text-primary" data-toggle="collapse" href=".formset-group-{{ revision_formset.instance.pk }}-{{ forloop.counter }}" role="button" aria-expanded="{{ forloop.first|yesno:'true,false'}}">
+                                  <span class="d-block pl-3">
+                                      {{ revision_formset.instance }}
+                                      <span class="collapse-indicator ml-2"><i class="fa-solid fa-sm fa-chevron-right text-primary"></i></span>
+                                  </span>
+                              </th>
+                          </tr>
+                          <tr class="collapse formset-group-{{ revision_formset.instance.pk }}-{{ forloop.counter }}{% if forloop.first %} show{% endif %}">
+                              <th scope="col"><span class="d-block pl-3">{% trans 'Field' %}</span></th>
+                              <th scope="col">{% trans 'Version A' %}</th>
+                              <th scope="col">{% trans 'Version B' %}</th>
+                          </tr>
+                      {% endif %}
+                      {% with formset_group_id=forloop.counter has_open=forloop.first %}
+                          {% for label, value_a, value_b, diff in formset_diffs %}
+                              <tr class="collapse formset-group-{{ revision_formset.instance.pk }}-{{ formset_group_id }}{% if diff %} diff-row table-warning{% endif %}{% if has_open %} show{% endif %}">
+                                  <th scope="row"><span class="d-block pl-3">{{ label }}</span></th>
+                                  <td class="version-a{% if not diff %} text-muted{% endif %}">{{ value_a }}</td>
+                                  <td class="version-b{% if not diff %} text-muted{% endif %}">{{ value_b }}</td>
+                              </tr>
+                          {% endfor %}
+                      {% endwith %}
+                  </tbody>
+              {% endfor %}
+          {% endwith %}
       {% endfor %}
-      </tr>
-
+    <tbody>
       <tr>
         <th scope="row">{% trans "Revert to" %}</th>
         <td><a class="btn btn-primary" href="{{revision_a_url}}"><i class="fa fa-undo"></i> {% trans 'Revert' %}</a></td>
