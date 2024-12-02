@@ -396,14 +396,14 @@ class RevisionListView(BaseReversionView):
 		for formset_index, formset_a in enumerate(detail_a.formsets):
 			formset_b = detail_b.formsets[formset_index]
 			try:
-				objs_a = related_versions_a[formset_a.model]
-				objs_b = related_versions_b[formset_b.model]
+				items_a = related_versions_a[formset_a.model]
+				items_b = related_versions_b[formset_b.model]
 			except KeyError:
 				continue
 			for form_index, form_a in enumerate(formset_a):
 				try:
-					instance_a = objs_a[form_index]
-					instance_b = objs_b[form_index]
+					instance_a = items_a[form_index]
+					instance_b = items_b[items_b.index(instance_a)]
 				except IndexError:
 					continue
 
