@@ -1,3 +1,4 @@
+import hashlib
 from collections import defaultdict
 
 import reversion
@@ -18,6 +19,8 @@ from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
+
+from django.utils.functional import cached_property
 from reversion import RegistrationError
 from reversion.models import Revision, Version
 from reversion.revisions import register, is_registered, create_revision, set_user, unregister, set_comment
@@ -286,15 +289,23 @@ class RecoverListView(BaseReversionView):
 
 
 class RevisionFormset:
-	def __init__(self, instance):
-		self.instance = instance
-		self.opts = instance._meta
+	def __init__(self, model):
+		self.model = model
+		self.opts = model._meta
+		self.diffs = []
+
+	@cached_property
+	def hash(self) -> str:
+		return hashlib.md5(self.opts.label_lower.encode('utf-8')).hexdigest()
+
+	def __iter__(self):
+		return iter(self.diffs)
 
 	def __str__(self):
 		return capfirst(self.opts.verbose_name_plural)
 
 	def __hash__(self):
-		return hash(self.instance)
+		return hash(self.model)
 
 
 class RevisionListView(BaseReversionView):
@@ -384,14 +395,14 @@ class RevisionListView(BaseReversionView):
 			              is_diff))
 		return diffs
 
-	def _get_formset_diffs(self, detail_a, detail_b) -> dict:
-		formset_diffs = defaultdict(list)
+	def _get_formsets_diffs(self, detail_a, detail_b) -> dict:
+		formsets_diffs = []
 
 		related_versions_a = getattr(detail_a, "related_versions", ())
 		related_versions_b = getattr(detail_b, "related_versions", ())
 
 		if not (related_versions_a and related_versions_b):
-			return formset_diffs
+			return formsets_diffs
 
 		for formset_index, formset_a in enumerate(detail_a.formsets):
 			formset_b = detail_b.formsets[formset_index]
@@ -400,6 +411,10 @@ class RevisionListView(BaseReversionView):
 				items_b = related_versions_b[formset_b.model]
 			except KeyError:
 				continue
+
+			revision_formset = RevisionFormset(formset_a.model)
+			formsets_diffs.append(revision_formset)
+
 			for form_index, form_a in enumerate(formset_a):
 				try:
 					instance_a = items_a[form_index]
@@ -417,8 +432,12 @@ class RevisionListView(BaseReversionView):
 
 				results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
 				                          *(opts.fields + opts.many_to_many))
-				formset_diffs[instance_a].append(results)
-		return dict([(RevisionFormset(o), v) for o, v in formset_diffs.items()])
+				revision_formset.diffs.append({
+					'instance_a': instance_a,
+					'instance_b': instance_b,
+					'results': results
+				})
+		return formsets_diffs
 
 	def _get_detail_view(self, obj, init_forms=True):
 		request_method = self.request.method
@@ -492,13 +511,13 @@ class RevisionListView(BaseReversionView):
 
 		diffs = self._get_diffs(obj_a, obj_b, detail_a, detail_b,
 		                        *(self.opts.fields + self.opts.many_to_many))
-		formset_diffs = self._get_formset_diffs(detail_a, detail_b)
+		formsets_diffs = self._get_formsets_diffs(detail_a, detail_b)
 
 		context = super(RevisionListView, self).get_context()
 		context.update({
 			'object': self.obj,
 			'opts': self.opts,
-			'formset_diffs': formset_diffs,
+			'formsets_diffs': formsets_diffs,
 			'version_a': version_a,
 			'version_b': version_b,
 			'revision_a_url': self.model_admin_url('revision', quote(version_a.object_id), version_a.id),
