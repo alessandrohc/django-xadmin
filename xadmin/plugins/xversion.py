@@ -419,7 +419,7 @@ class RevisionListView(BaseReversionView):
 				try:
 					instance_a = items_a[form_index]
 					instance_b = items_b[items_b.index(instance_a)]
-				except IndexError:
+				except (IndexError, ValueError):
 					continue
 
 				opts = form_a.detail.opts
