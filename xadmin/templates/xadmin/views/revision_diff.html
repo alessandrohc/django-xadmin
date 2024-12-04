@@ -56,10 +56,10 @@
                   </th>
               </tr>
           </tbody>
-          {% with has_open=forloop.first hash=revision_formset.hash %}
+          {% with has_open=forloop.first hash=revision_formset.hash formset_diffs_count=revision_formset.diffs|length %}
               {% for formset_diffs in revision_formset.diffs %}
                   <tbody class="collapse xadmin-revision-diff-formset-instance formset-{{ hash }} {% if has_open %} show{% endif %}">
-                      {% if revision_formset.diffs|length > 1 %}
+                      {% if formset_diffs_count > 1 %}
                           <tr>
                               <th colspan="3" class="xadmin-revision-diff-formset-instance-title text-primary" data-toggle="collapse" href=".formset-group-{{ hash }}-{{ forloop.counter }}" role="button" aria-expanded="{% if has_open and forloop.first %}true{% else %}false{% endif %}">
                                   <span class="d-block pl-3">
@@ -74,9 +74,9 @@
                               <th scope="col">{% trans 'Version B' %}</th>
                           </tr>
                       {% endif %}
-                      {% with formset_group_id=forloop.counter has_open=has_open has_first=forloop.first hash=hash %}
+                      {% with formset_group_id=forloop.counter has_open=has_open has_first=forloop.first hash=hash formset_diffs_count=formset_diffs_count %}
                           {% for label, value_a, value_b, diff in formset_diffs.results %}
-                              <tr class="collapse formset-group-{{ hash }}-{{ formset_group_id }}{% if diff %} diff-row table-warning{% endif %}{% if has_open and has_first %} show{% endif %}">
+                              <tr class="collapse formset-group-{{ hash }}-{{ formset_group_id }}{% if diff %} diff-row table-warning{% endif %}{% if has_open and has_first or formset_diffs_count == 1 %} show{% endif %}">
                                   <th scope="row"><span class="d-block pl-3">{{ label }}</span></th>
                                   <td class="version-a{% if not diff %} text-muted{% endif %}">{{ value_a }}</td>
                                   <td class="version-b{% if not diff %} text-muted{% endif %}">{{ value_b }}</td>
