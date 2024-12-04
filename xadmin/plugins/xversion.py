@@ -431,6 +431,10 @@ class RevisionListView(BaseReversionView):
 					except (IndexError, ValueError):
 						instance_b = opts.model()
 
+				# There must be at least one object in the comparison
+				if not (instance_a.pk or instance_b.pk):
+					continue
+
 				form_a.instance = instance_a
 				form_a.detail.org_obj = instance_a
 
