@@ -63,7 +63,11 @@
                           <tr>
                               <th colspan="3" class="xadmin-revision-diff-formset-instance-title text-primary" data-toggle="collapse" href=".formset-group-{{ hash }}-{{ forloop.counter }}" role="button" aria-expanded="{% if has_open and forloop.first %}true{% else %}false{% endif %}">
                                   <span class="d-block pl-3">
-                                      {{ formset_diffs.instance_b }}
+                                      {% if formset_diffs.instance_b.pk %}
+                                        {{ formset_diffs.instance_b }}
+                                      {% else %}
+                                        {{ formset_diffs.instance_a }}
+                                      {% endif %}
                                       <span class="collapse-indicator ml-2"><i class="fa-solid fa-sm fa-chevron-right text-primary"></i></span>
                                   </span>
                               </th>

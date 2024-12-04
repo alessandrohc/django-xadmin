@@ -401,7 +401,7 @@ class RevisionListView(BaseReversionView):
 		related_versions_a = getattr(detail_a, "related_versions", ())
 		related_versions_b = getattr(detail_b, "related_versions", ())
 
-		if not (related_versions_a and related_versions_b):
+		if not (related_versions_a or related_versions_b):
 			return formsets_diffs
 
 		for formset_index, formset_a in enumerate(detail_a.formsets):
@@ -416,19 +416,27 @@ class RevisionListView(BaseReversionView):
 			formsets_diffs.append(revision_formset)
 
 			for form_index, form_a in enumerate(formset_a):
-				try:
-					instance_a = items_a[form_index]
-					instance_b = items_b[items_b.index(instance_a)]
-				except (IndexError, ValueError):
-					continue
-
 				opts = form_a.detail.opts
-				form_b = formset_b[form_index]
+				try:
+					instance_a = items_a[items_a.index(form_a.instance)]
+				except (IndexError, ValueError):
+					instance_a = opts.model()
+					try:
+						instance_b = items_b[items_b.index(form_a.instance)]
+					except (IndexError, ValueError):
+						instance_b = opts.model()
+				else:
+					try:
+						instance_b = items_b[items_b.index(instance_a)]
+					except (IndexError, ValueError):
+						instance_b = opts.model()
 
 				form_a.instance = instance_a
-				form_b.instance = instance_b
 				form_a.detail.org_obj = instance_a
+
+				form_b = formset_b[form_index]
 				form_b.detail.org_obj = instance_b
+				form_b.instance = instance_b
 
 				results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
 				                          *(opts.fields + opts.many_to_many))
