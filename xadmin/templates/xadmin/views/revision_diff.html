@@ -48,6 +48,7 @@
       {% endfor %}
     </tbody>
       {% for revision_formset in formsets_diffs %}
+          {% if revision_formset.diffs %}
           <tbody class="xadmin-revision-diff-formset-model">
               <tr>
                   <th colspan="3" class="xadmin-revision-diff-formset-model-title" data-toggle="collapse" href=".formset-{{ revision_formset.hash }}" role="button" aria-expanded="{{ forloop.first|yesno:'true,false'}}">
@@ -90,6 +91,7 @@
                   </tbody>
               {% endfor %}
           {% endwith %}
+          {% endif %}
       {% endfor %}
     <tbody>
       <tr>
