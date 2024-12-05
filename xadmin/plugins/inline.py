@@ -579,11 +579,11 @@ class InlineFormsetPlugin(BaseAdminPlugin):
 			                     'xadmin.plugin.formset.css')
 		return media
 
-	def _get_detail_formset_instance(self, inline):
+	def _get_detail_formset_instance(self, inline, **options):
 		detail_page = isinstance(self.admin_view, DetailAdminView)
-		formset = inline.instance_form(extra=0 if detail_page else inline.extra,
-		                               max_num=0 if detail_page else inline.max_num,
-		                               can_delete=False if detail_page else inline.has_delete_permission())
+		formset = inline.instance_form(extra=options.get('extra', 0) if detail_page else inline.extra,
+		                               max_num=options.get('max_num', 0) if detail_page else inline.max_num,
+		                               can_delete=options.get('can_delete', False) if detail_page else inline.has_delete_permission())
 		formset.detail_page = detail_page
 		if formset.helper.layout:
 			replace_field_to_value(formset.helper.layout, inline)
@@ -594,7 +594,7 @@ class InlineFormsetPlugin(BaseAdminPlugin):
 			                    {"model": model})
 			for form in formset.forms:
 				instance = form.instance
-				if instance.pk:
+				if instance.pk or options.get('detail', False):
 					form.detail = self.get_view(DetailAdminUtil, option_class, instance)
 					form.show_hidden_detail = not formset.detail_page
 		return formset
@@ -613,8 +613,12 @@ class DetailAdminUtil(DetailAdminView):
 class DetailInlineFormsetPlugin(InlineFormsetPlugin):
 
 	def get_model_form(self, form, **kwargs):
-		self.formsets = formsets = [self._get_detail_formset_instance(
-			inline) for inline in self.inline_instances]
+		# Options that affect the construction of formsets on the details page.
+		options = getattr(self.admin_view, 'formset_options', {})
+		self.formsets = formsets = [
+			self._get_detail_formset_instance(inline, **options)
+			for inline in self.inline_instances
+		]
 		self.admin_view.formsets = formsets
 		return form
 
