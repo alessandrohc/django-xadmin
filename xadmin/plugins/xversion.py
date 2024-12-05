@@ -28,6 +28,7 @@ from reversion.revisions import register, is_registered, create_revision, set_us
 from xadmin.layout import Field, render_field, render_to_string
 from xadmin.plugins.actions import BaseActionView
 from xadmin.plugins.inline import InlineModelAdmin
+from xadmin.plugins.utils import OrderedDefaultDict
 from xadmin.sites import site
 from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts
 from xadmin.views import BaseAdminPlugin, ModelAdminView, CreateAdminView, UpdateAdminView, DetailAdminView, \
@@ -404,51 +405,45 @@ class RevisionListView(BaseReversionView):
 		if not (related_versions_a or related_versions_b):
 			return formsets_diffs
 
-		for formset_index, formset_a in enumerate(detail_a.formsets):
-			formset_b = detail_b.formsets[formset_index]
-			try:
-				versions_a = related_versions_a[formset_a.model]
-				versions_b = related_versions_b[formset_b.model]
-			except KeyError:
-				continue
+		for model in set(list(related_versions_a) + list(related_versions_b)):
+			opts = model._meta
 
-			revision_formset = RevisionFormset(formset_a.model)
-			formsets_diffs.append(revision_formset)
+			versions_a = related_versions_a.get(model, ())
+			versions_b = related_versions_b.get(model, ())
 
-			for form_index, form_a in enumerate(formset_a):
-				opts = form_a.detail.opts
-				try:
-					instance_a = versions_a[versions_a.index(form_a.instance)]
-				except (IndexError, ValueError):
-					instance_a = opts.model()
-					try:
-						instance_b = versions_b[versions_b.index(form_a.instance)]
-					except (IndexError, ValueError):
-						instance_b = opts.model()
-				else:
-					try:
-						instance_b = versions_b[versions_b.index(instance_a)]
-					except (IndexError, ValueError):
-						instance_b = opts.model()
+			versions_a_iter, versions_b_iter = iter(versions_a), iter(versions_b)
 
-				# There must be at least one object in the comparison
+			formset_revision = RevisionFormset(model)
+			formsets_diffs.append(formset_revision)
+
+			while True:
+				instance_a = next(versions_a_iter, model())
+				instance_b = next(versions_b_iter, model())
+
 				if not (instance_a.pk or instance_b.pk):
-					continue
+					break
 
-				form_a.instance = instance_a
-				form_a.detail.org_obj = instance_a
+				for idx, formset in enumerate(detail_a.formsets):
+					if not issubclass(formset.model, model):
+						continue
+					for index, form_a in enumerate(formset):
+						form_b = detail_b.formsets[idx][index]
 
-				form_b = formset_b[form_index]
-				form_b.detail.org_obj = instance_b
-				form_b.instance = instance_b
+						form_a.instance = instance_a
+						form_a.detail.org_obj = instance_a
 
-				results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
-				                          *(opts.fields + opts.many_to_many))
-				revision_formset.diffs.append({
-					'instance_a': instance_a,
-					'instance_b': instance_b,
-					'results': results
-				})
+						form_b.instance = instance_b
+						form_b.detail.org_obj = instance_b
+
+						results = self._get_diffs(instance_a, instance_b, form_a.detail, form_b.detail,
+						                          *(opts.fields + opts.many_to_many))
+						formset_revision.diffs.append({
+							'instance_a': instance_a,
+							'instance_b': instance_b,
+							'results': results
+						})
+						break
+					break
 		return formsets_diffs
 
 	def _get_detail_view(self, obj, init_forms=True):
@@ -458,20 +453,23 @@ class RevisionListView(BaseReversionView):
 			detail = self.get_model_view(DetailAdminUtil, self.model, obj)
 			# creates related formsets
 			if init_forms:
+				# Reconfigures formset creation to allow recovering deleted inlines.
+				detail.formset_options = {'extra': 1, 'max_num': 1, 'detail': True}
 				detail.instance_forms()
 		finally:
 			self.request.method = request_method
 		return detail
 
 	def _get_related_versions(self, revision, obj):
-		related_versions = defaultdict(list)
+		related_versions = OrderedDefaultDict(list)
 		for related_field in obj._meta.related_objects:
 			related_model = related_field.related_model
 			ctype = ContentType.objects.get_for_model(related_model)
 			versions = Version.objects.filter(
 				revision=revision,
 				content_type=ctype
-			)
+			).order_by("-revision__date_created")
+
 			if versions.exists() and not is_registered(related_model):
 				# Required to retrieve the updated object.
 				_autoregister(self, related_model)
