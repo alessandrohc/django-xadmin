@@ -25,4 +25,16 @@ jQuery(function($){
             row.find('.formset-num').html(gettext('New Item'));
         }
     });
+
+    $('.js-control-diff-formset-model').each(function () {
+        var $model = $(this);
+        var $model_instance = $model.next();
+        while (($model_instance.length > 0) && ($model_instance.hasClass('js-control-diff-formset-instance'))) {
+            if ($model_instance.find('.diff-row').length > 0) {
+                $model.addClass('has-diff-row');
+                break; // when find the first 'diff'.
+            }
+            $model_instance = $model_instance.next();
+        }
+    });
 });
