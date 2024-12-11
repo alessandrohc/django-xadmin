@@ -34,7 +34,7 @@ from xadmin.util import unquote, quote, is_related_field2, is_related_remote_fie
 from xadmin.views import BaseAdminPlugin, ModelAdminView, CreateAdminView, UpdateAdminView, DetailAdminView, \
 	ModelFormAdminView, DeleteAdminView, ListAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
-from xadmin.views.detail import DetailAdminUtil
+from xadmin.views.detail import DetailAdminUtil, ResultField
 
 
 def _autoregister(admin, model, follow=None):
@@ -309,6 +309,29 @@ class RevisionFormset:
 		return hash(self.model)
 
 
+class RevisionDetailAdminUtil(DetailAdminUtil):
+	"""Helper class for review detail results"""
+	...
+
+
+class RevisionDetailResultsPlugin(BaseAdminPlugin):
+	"""Plugin to change the formatting of the details view results"""
+	revision_detail_empty_value = _('Not filled (empty)')
+	revision_detail_result_field = ResultField
+
+	def init_request(self, *args, **kwargs):
+		return isinstance(self.admin_view, RevisionDetailAdminUtil)
+
+	def get_field_result(self, __, field_name):
+		result_field = self.revision_detail_result_field(
+			self.admin_view.obj, field_name,
+			self.admin_view,
+			empty_value=self.revision_detail_empty_value
+		)
+		result_field.allow_tags = True
+		return result_field
+
+
 class RevisionListView(BaseReversionView):
 	object_history_template = None
 	revision_diff_template = None
@@ -450,11 +473,16 @@ class RevisionListView(BaseReversionView):
 		request_method = self.request.method
 		try:
 			self.request.method = "GET"
-			detail = self.get_model_view(DetailAdminUtil, self.model, obj)
+			detail_view_class = RevisionDetailAdminUtil
+			detail = self.get_model_view(detail_view_class, self.model, obj)
 			# creates related formsets
 			if init_forms:
 				# Reconfigures formset creation to allow recovering deleted inlines.
-				detail.formset_options = {'extra': 1, 'max_num': 1, 'detail': True}
+				detail.formset_options = {
+					'extra': 1, 'max_num': 1,
+					'detail_view': detail_view_class,
+					'detail': True
+				}
 				detail.instance_forms()
 		finally:
 			self.request.method = request_method
@@ -838,5 +866,6 @@ site.register_plugin(ReversionPlugin, DeleteAdminView)
 site.register_plugin(ReversionRegisterPlugin, RecoverListView)
 site.register_plugin(ReversionRegisterPlugin, RevisionListView)
 
+site.register_plugin(RevisionDetailResultsPlugin, RevisionDetailAdminUtil)
 site.register_plugin(InlineRevisionPlugin, InlineModelAdmin)
 site.register_plugin(ActionRevisionPlugin, BaseActionView)
