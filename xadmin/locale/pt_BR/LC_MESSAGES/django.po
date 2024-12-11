@@ -1,7 +1,7 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# 
+#
 # Translators:
 # korndorfer <codigo.aberto@dorfer.com.br>, 2013
 # Ellison Leão, 2013
@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xadmin-core\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-12-06 09:58-0300\n"
+"POT-Creation-Date: 2024-12-11 17:20-0300\n"
 "PO-Revision-Date: 2013-11-20 10:21+0000\n"
 "Last-Translator: gladson <gladson@immensa.com.br>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/"
@@ -423,7 +423,7 @@ msgid "Enter %s"
 msgstr "Entrar %s"
 
 #: xadmin/plugins/editable.py:80 xadmin/views/dashboard.py:671
-#: xadmin/views/delete.py:25 xadmin/views/detail.py:169
+#: xadmin/views/delete.py:25 xadmin/views/detail.py:170
 #: xadmin/views/edit.py:525
 #, python-format
 msgid "%(name)s object with primary key %(key)r does not exist."
@@ -609,30 +609,34 @@ msgstr "Excluídos %(verbose_name)s."
 msgid "Recover deleted %(name)s"
 msgstr "Recuperar %(name)s removido"
 
-#: xadmin/plugins/xversion.py:339
+#: xadmin/plugins/xversion.py:319
+msgid "Not filled (empty)"
+msgstr "Não preenchido (vazio)"
+
+#: xadmin/plugins/xversion.py:362
 #, python-format
 msgid "Change history: %s"
 msgstr "Alterar histórico: %s"
 
-#: xadmin/plugins/xversion.py:506
+#: xadmin/plugins/xversion.py:534
 msgid "Must select two versions."
 msgstr "É necessário selecionar 2 versões"
 
-#: xadmin/plugins/xversion.py:513
+#: xadmin/plugins/xversion.py:541
 msgid "Please select two different versions."
 msgstr "Por favor selecione duas versões diferentes."
 
-#: xadmin/plugins/xversion.py:587 xadmin/plugins/xversion.py:708
+#: xadmin/plugins/xversion.py:615 xadmin/plugins/xversion.py:736
 #, python-format
 msgid "Current: %s"
 msgstr "Atual: %s"
 
-#: xadmin/plugins/xversion.py:631
+#: xadmin/plugins/xversion.py:659
 #, python-format
 msgid "Revert %s"
 msgstr "Revertido: %s"
 
-#: xadmin/plugins/xversion.py:647
+#: xadmin/plugins/xversion.py:675
 #, python-format
 msgid ""
 "The %(model)s \"%(name)s\" was reverted successfully. You may edit it again "
@@ -641,12 +645,12 @@ msgstr ""
 "%(model)s \"%(name)s\" foi revertido(a) com sucesso. Você pode editá-lo(a) "
 "novamente abaixo."
 
-#: xadmin/plugins/xversion.py:667
+#: xadmin/plugins/xversion.py:695
 #, python-format
 msgid "Recover %s"
 msgstr "Recuperar %s"
 
-#: xadmin/plugins/xversion.py:683
+#: xadmin/plugins/xversion.py:711
 #, python-format
 msgid ""
 "The %(model)s \"%(name)s\" was recovered successfully. You may edit it again "
@@ -1461,17 +1465,12 @@ msgstr "Versão A"
 msgid "Version B"
 msgstr "Versão B"
 
-#: xadmin/templates/xadmin/views/revision_diff.html:87
-#: xadmin/templates/xadmin/views/revision_diff.html:90
-msgid "Not filled (empty)"
-msgstr "Não preenchido (vazio)"
-
-#: xadmin/templates/xadmin/views/revision_diff.html:102
+#: xadmin/templates/xadmin/views/revision_diff.html:98
 msgid "Revert to"
 msgstr "Reverter para"
 
-#: xadmin/templates/xadmin/views/revision_diff.html:103
-#: xadmin/templates/xadmin/views/revision_diff.html:104
+#: xadmin/templates/xadmin/views/revision_diff.html:99
+#: xadmin/templates/xadmin/views/revision_diff.html:100
 msgid "Revert"
 msgstr "Reverter"
 
@@ -1588,12 +1587,12 @@ msgstr "%s Painel"
 msgid "The %(name)s \"%(obj)s\" was deleted successfully."
 msgstr "%(name)s \"%(obj)s\" excluído(a) com sucesso."
 
-#: xadmin/views/detail.py:197 xadmin/views/detail.py:203
+#: xadmin/views/detail.py:198 xadmin/views/detail.py:204
 #: xadmin/views/edit.py:229 xadmin/views/edit.py:235 xadmin/views/form.py:64
 msgid "Other Fields"
 msgstr "Outros Campos"
 
-#: xadmin/views/detail.py:285
+#: xadmin/views/detail.py:286
 #, python-format
 msgid "%s Detail"
 msgstr "%s Detalhes"
@@ -1663,4 +1662,3 @@ msgstr "Cancelar Classificação"
 #: xadmin/views/website.py:17
 msgid "Main Dashboard"
 msgstr "Painel Principal"
-
