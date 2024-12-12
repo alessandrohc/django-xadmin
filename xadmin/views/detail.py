@@ -58,7 +58,7 @@ class ShowField(Field):
 
 class ResultField:
 
-	def __init__(self, obj, field_name, admin_view=None, admin_form=None):
+	def __init__(self, obj, field_name, admin_view=None, admin_form=None, **options):
 		self.text = '&nbsp;'
 		self.wraps = []
 		self.allow_tags = False
@@ -70,7 +70,7 @@ class ResultField:
 		self.attr = None
 		self.label = None
 		self.value = None
-
+		self.options = options
 		self.init()
 
 	def get_admin_view_form(self):
@@ -114,9 +114,10 @@ class ResultField:
 
 	@property
 	def val(self):
+		empty_value = self.options.get('empty_value', EMPTY_CHANGELIST_VALUE)
 		text = mark_safe(self.text) if self.allow_tags else conditional_escape(self.text)
-		if force_str(text) == '' or text == 'None' or text == EMPTY_CHANGELIST_VALUE:
-			text = mark_safe('<span class="text-muted">%s</span>' % EMPTY_CHANGELIST_VALUE)
+		if force_str(text) == '' or text in ('None', empty_value, EMPTY_CHANGELIST_VALUE):
+			text = mark_safe('<span class="text-muted">%s</span>' % empty_value)
 		for wrap in self.wraps:
 			text = mark_safe(wrap % text)
 		return text

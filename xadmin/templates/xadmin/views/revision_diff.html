@@ -83,12 +83,8 @@
                           {% for label, value_a, value_b, diff in formset_diffs.results %}
                               <tr class="collapse formset-group-{{ hash }}-{{ formset_group_id }}{% if diff %} diff-row table-warning{% endif %}{% if has_open and has_first or formset_diffs_count == 1 %} show{% endif %}">
                                   <th scope="row"><span class="d-block pl-3">{{ label }}</span></th>
-                                  <td class="version-a{% if not diff %} text-muted{% endif %}">
-                                    {% if formset_diffs.instance_a.pk %}{{ value_a }}{% else %}{% trans 'Not filled (empty)' %}{% endif %}
-                                  </td>
-                                  <td class="version-b{% if not diff %} text-muted{% endif %}">
-                                    {% if formset_diffs.instance_b.pk %}{{ value_b }}{% else %}{% trans 'Not filled (empty)' %}{% endif %}
-                                  </td>
+                                  <td class="version-a{% if not diff %} text-muted{% endif %}">{{ value_a }}</td>
+                                  <td class="version-b{% if not diff %} text-muted{% endif %}">{{ value_b }}</td>
                               </tr>
                           {% endfor %}
                       {% endwith %}

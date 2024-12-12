@@ -595,7 +595,8 @@ class InlineFormsetPlugin(BaseAdminPlugin):
 			for form in formset.forms:
 				instance = form.instance
 				if instance.pk or options.get('detail', False):
-					form.detail = self.get_view(DetailAdminUtil, option_class, instance)
+					detail_view = options.get('detail_view', DetailAdminUtil)
+					form.detail = self.get_view(detail_view, option_class, instance)
 					form.show_hidden_detail = not formset.detail_page
 		return formset
 
