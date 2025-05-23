@@ -291,7 +291,7 @@ class ActionPlugin(BaseAdminPlugin):
 		else:
 			description = capfirst(action.replace('_', ' '))
 
-		return func, action, description, getattr(func, 'icon', 'tasks')
+		return func, action, description, getattr(func, 'icon', 'fa fa-tasks')
 
 	# View Methods
 	def result_header(self, item, field_name, row):
