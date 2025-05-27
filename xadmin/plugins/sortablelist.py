@@ -58,12 +58,21 @@ class SortableListPlugin(BaseAdminPlugin):
 
 
 class SaveOrderView(ModelAdminView):
+	list_order_field_inverse = False
 
 	@csrf_protect_m
 	@transaction.atomic
 	def post(self, request):
 		order_objs = request.POST.getlist("order[]")
-		for order_value, pk in enumerate(order_objs, start=1):
+		total_order_objs = len(order_objs)
+
+		for index, pk in enumerate(order_objs):
+			pk = int(pk)
+			if self.list_order_field_inverse:
+				order_value = total_order_objs - index
+			else:
+				order_value = index + 1
+
 			self.save_order(pk, order_value)
 		self.message_user('Alteração feita com sucesso', 'success')
 		return self.render_response({})
