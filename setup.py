@@ -4,6 +4,11 @@ from io import open
 
 from setuptools import setup
 
+# Função para ler as dependências do requirements.txt
+def load_requirements(filename='requirements.txt'):
+    with open(filename, 'r') as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
 setup(
 	name='xadmin',
 	version='3.6.3',
@@ -13,18 +18,11 @@ setup(
 	author='sshwsfc',
 	author_email='sshwsfc@gmail.com',
 	license=open('LICENSE', encoding='utf-8').read(),
-	url='https://github.com/alexsilva/django-xadmin',
-	download_url='https://github.com/alexsilva/django-xadmin/archive/python3-dj32.zip',
+	url='https://github.com/alessandrohc/django-xadmin',
+	download_url='https://github.com/alessandrohc/django-xadmin/archive/python3-dj32.zip',
 	packages=['xadmin', 'xadmin.migrations', 'xadmin.plugins', 'xadmin.templatetags', 'xadmin.views'],
 	include_package_data=True,
-	install_requires=[
-		'django>=3,<5',
-		'django-crispy-forms==2.0',
-		'crispy-bootstrap4',
-		'django-import-export==3.2.0',
-		'django-reversion==5.0.12',
-		'django-formtools==2.4.1'
-	],
+	install_requires=load_requirements(),
 	extras_require={
 		'Excel': ['xlwt', 'xlsxwriter'],
 		'Reversion': ['django-reversion>=5.0.2'],
