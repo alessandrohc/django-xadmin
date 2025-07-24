@@ -1,8 +1,7 @@
 # coding:utf-8
-import cgi
+import urllib.request
 import urllib.parse
 
-import httplib2
 from django.core.cache import cache, DEFAULT_CACHE_ALIAS, caches
 from django.core.cache.backends.dummy import DummyCache
 from django.template import loader
@@ -79,17 +78,22 @@ class ThemePlugin(BaseAdminPlugin):
 			else:
 				ext_themes = []
 				try:
-					h = httplib2.Http()
-					resp, content = h.request("https://bootswatch.com/api/4.json", 'GET', '',
-					                          headers={"Accept": "application/json",
-					                                   "User-Agent": self.request.META['HTTP_USER_AGENT']})
-					mimetype, spec = cgi.parse_header(resp.get('content-type', ''))
-					content = content.decode(spec.get('charset', 'UTF-8'))
-					watch_themes = json.loads(content)['themes']
-					ext_themes.extend([
-						{'name': t['name'], 'description': t['description'],
-						 'css': t['cssMin'], 'thumbnail': t['thumbnail']}
-						for t in watch_themes])
+					headers = {
+						"Accept": "application/json",
+						"User-Agent": self.request.META.get('HTTP_USER_AGENT', 'Mozilla/5.0')
+					}
+					req = urllib.request.Request("https://bootswatch.com/api/4.json", headers=headers)
+					with urllib.request.urlopen(req) as response:
+						content_type = response.headers.get('Content-Type', '')
+						charset = 'utf-8'
+						if 'charset=' in content_type:
+							charset = content_type.split('charset=')[-1]
+						content = response.read().decode(charset)
+						watch_themes = json.loads(content)['themes']
+						ext_themes.extend([
+							{'name': t['name'], 'description': t['description'],
+							 'css': t['cssMin'], 'thumbnail': t['thumbnail']}
+							for t in watch_themes])
 				except Exception as e:
 					print(e)
 
