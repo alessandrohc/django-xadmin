@@ -4,6 +4,8 @@ Make items sortable by drag-drop in list view. Diffierent from
 builtin plugin sortable, it touches model field indeed intead
 of only for display.
 """
+from xadmin.views.list import ResultHeader
+
 from django.db import transaction
 from django.template.loader import render_to_string
 
@@ -26,6 +28,12 @@ class SortableListPlugin(BaseAdminPlugin):
 	@property
 	def is_list_sortable(self):
 		return True
+
+	def result_header(self, header, field_name, row):
+		new_header = ResultHeader(field_name, row)
+		new_header.text = header.text
+		new_header.attr = header.attr
+		return new_header
 
 	def result_row(self, __, obj):
 		row = __()
