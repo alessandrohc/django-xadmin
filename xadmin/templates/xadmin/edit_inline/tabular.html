@@ -5,13 +5,15 @@
 {% block box_content_attrs %}{% endblock box_content_attrs %}
 
 {% block formset_errors %}
-    <table class="table table-danger">
-        <tr>
-            <td class="pb-0">
-                {{ block.super }}
-            </td>
-        </tr>
-    </table>
+    {% if formset.formset.non_form_errors %}
+        <table class="table table-danger">
+            <tr>
+                <td class="pb-0">
+                    {{ block.super }}
+                </td>
+            </tr>
+        </table>
+    {% endif %}
 {% endblock formset_errors %}
 
 {% block formset_content %}
