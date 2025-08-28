@@ -24,7 +24,11 @@
 {% block box_content %}
   {% if not formset.formset.detail_page %}
   {{ formset.formset.management_form }}
-  {{ formset.formset.non_form_errors }}
+  {% block formset_errors %}
+      {% with formset_non_form_errors=formset.formset.non_form_errors %}
+        {% include "xadmin/edit_inline/base_errors.html" %}
+      {% endwith %}
+  {% endblock formset_errors %}
   {% endif %}
   {% block formset_content %}
     {% for fs in formset.formset %}

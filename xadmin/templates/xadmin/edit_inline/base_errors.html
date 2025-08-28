@@ -1,0 +1,11 @@
+{% for error in formset_non_form_errors %}
+    {% if forloop.first %}
+        <div class="alert alert-danger" role="alert">
+            <ul class="list-unstyled m-0">
+    {% endif %}
+                <li class="m-0">&#9632; <strong class="d-inline-block pl-2">{{ error }}</strong></li>
+    {% if forloop.last %}
+            </ul>
+        </div>
+    {% endif %}
+{% endfor %}
