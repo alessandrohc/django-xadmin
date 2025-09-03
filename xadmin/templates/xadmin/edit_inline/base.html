@@ -11,7 +11,7 @@
 
 {% block box_header %}
  {% if not formset.formset.detail_page and not formset.inline_style == 'one' %}
-  {% if has_add_permission %}
+  {% if formset.formset.max_num > formset.formset.extra and has_add_permission %}
   <a class="btn btn-link add-row" id="{{ prefix }}-add-row" href="#"><i class="icon fa fa-plus"></i></a>
   {% endif %}
  {% endif %}
