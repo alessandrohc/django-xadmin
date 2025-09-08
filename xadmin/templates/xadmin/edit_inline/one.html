@@ -9,5 +9,12 @@
     {% include "xadmin/edit_inline/base_errors.html" %}
   {% endwith %}
 
-  {% crispy formset.formset.0 formset.formset.helper %}
+    <div class="card formset-row">
+        <div class="card-body">
+            {% if formset.formset.can_delete %}
+                <a class="delete-row position-absolute position-top position-right m-3 z-index-3"><i class="fa fa-times"></i></a>
+            {% endif %}
+            {% crispy formset.formset.0 formset.formset.helper %}
+        </div>
+    </div>
 {% endblock box_content %}
