@@ -14,7 +14,7 @@ from xadmin.filters import FILTER_PREFIX, SEARCH_VAR
 from xadmin.models import Bookmark
 from xadmin.plugins.relate import RELATE_PREFIX
 from xadmin.plugins.utils import get_context_dict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.views import ModelAdminView, BaseAdminPlugin, ListAdminView
 from xadmin.views.dashboard import widget_manager, BaseWidget, PartialBaseWidget
 from xadmin.views.list import COL_LIST_VAR, ORDER_VAR
@@ -232,4 +232,4 @@ class BookmarkWidget(PartialBaseWidget):
 
 site.register(Bookmark, BookmarkAdmin)
 site.register_plugin(BookmarkPlugin, ListAdminView)
-site.register_modelview(r'^bookmark/$', BookmarkView, name='%s_%s_bookmark')
+site.register_modelview(AdminPath('bookmark/', BookmarkView, name='%s_%s_bookmark'))

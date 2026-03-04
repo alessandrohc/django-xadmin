@@ -11,7 +11,7 @@ from django.utils.http import urlencode
 from django.utils.translation import gettext_lazy as _, gettext
 
 from xadmin.plugins.utils import get_context_dict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.util import lookup_field, label_for_field, json
 from xadmin.views import BaseAdminPlugin, ListAdminView
 from xadmin.views.dashboard import ModelBaseWidget, widget_manager
@@ -157,4 +157,4 @@ class ChartsView(ListAdminView):
 
 
 site.register_plugin(ChartsPlugin, ListAdminView)
-site.register_modelview(r'^chart/(.+)/$', ChartsView, name='%s_%s_chart')
+site.register_modelview(AdminPath('chart/<str:name>/', ChartsView, name='%s_%s_chart'))

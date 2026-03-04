@@ -3,7 +3,7 @@ from django.template import loader
 from django.views.i18n import set_language
 
 from xadmin.plugins.utils import get_context_dict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.views import BaseAdminPlugin, CommAdminView, BaseAdminView, filter_hook
 
 
@@ -30,4 +30,4 @@ class SetLangView(BaseAdminView):
 
 if settings.LANGUAGES and 'django.middleware.locale.LocaleMiddleware' in settings.MIDDLEWARE:
 	site.register_plugin(SetLangNavPlugin, CommAdminView)
-	site.register_view(r'^i18n/setlang/$', SetLangView, 'set_language')
+	site.register_view(AdminPath('i18n/setlang/', SetLangView, 'set_language'))

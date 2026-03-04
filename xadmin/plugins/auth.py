@@ -21,7 +21,7 @@ from django.utils.translation import gettext as _
 from django.views.decorators.debug import sensitive_post_parameters
 
 from xadmin.layout import Fieldset, Main, Side, Row, FormHelper
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.util import unquote
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView, ModelAdminView, CommAdminView, csrf_protect_m, filter_hook
 
@@ -297,7 +297,8 @@ class ChangeAccountPasswordView(ChangePasswordView):
 
 
 user_model = settings.AUTH_USER_MODEL.lower().replace('.', '/')
-site.register_view(r'^%s/(.+)/password/$' % user_model,
-                   ChangePasswordView, name='user_change_password')
-site.register_view(r'^account/password/$', ChangeAccountPasswordView,
-                   name='account_password')
+
+site.register_view(AdminPath(f'{user_model}/<str:object_id>/password/',
+                   ChangePasswordView, name='user_change_password'))
+site.register_view(AdminPath('account/password/', ChangeAccountPasswordView,
+                   name='account_password'))

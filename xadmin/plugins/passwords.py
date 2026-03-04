@@ -5,7 +5,7 @@ from django.contrib.auth.views import PasswordResetConfirmView as password_reset
 from django.template.response import TemplateResponse
 from django.utils.translation import gettext as _
 
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.views.base import BaseAdminPlugin, BaseAdminView, csrf_protect_m
 from xadmin.views.website import LoginView
 
@@ -68,8 +68,7 @@ class ResetPasswordSendView(ResetPasswordBaseAdminView):
 		else:
 			return self.get(request, form=form)
 
-
-site.register_view(r'^xadmin/password_reset/$', ResetPasswordSendView, name='xadmin_password_reset')
+site.register_view(AdminPath('xadmin/password_reset/', ResetPasswordSendView, name='xadmin_password_reset'))
 
 
 class ResetLinkPlugin(BaseAdminPlugin):

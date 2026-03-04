@@ -29,7 +29,7 @@ from xadmin.layout import Field, render_field, render_to_string
 from xadmin.plugins.actions import BaseActionView
 from xadmin.plugins.inline import InlineModelAdmin
 from xadmin.plugins.utils import OrderedDefaultDict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts
 from xadmin.views import BaseAdminPlugin, ModelAdminView, CreateAdminView, UpdateAdminView, DetailAdminView, \
 	ModelFormAdminView, DeleteAdminView, ListAdminView
@@ -850,14 +850,15 @@ class ReversionAdmin:
 
 site.register(Revision, ReversionAdmin)
 
+#
 site.register_modelview(
-	r'^recover/$', RecoverListView, name='%s_%s_recoverlist')
+	AdminPath('recover/', RecoverListView, name='%s_%s_recoverlist'))
 site.register_modelview(
-	r'^recover/([^/]+)/$', RecoverView, name='%s_%s_recover')
+	AdminPath('recover/<str:version_id>/', RecoverView, name='%s_%s_recover'))
 site.register_modelview(
-	r'^([^/]+)/revision/$', RevisionListView, name='%s_%s_revisionlist')
+	AdminPath('<str:object_id>/revision/', RevisionListView, name='%s_%s_revisionlist'))
 site.register_modelview(
-	r'^([^/]+)/revision/([^/]+)/$', RevisionView, name='%s_%s_revision')
+	AdminPath('<str:object_id>/revision/<str:version_id>/', RevisionView, name='%s_%s_revision'))
 
 site.register_plugin(ReversionPlugin, ListAdminView)
 site.register_plugin(ReversionPlugin, ModelFormAdminView)

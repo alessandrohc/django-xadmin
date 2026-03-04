@@ -191,17 +191,12 @@ class AdminSite:
 		self._registry_modelviews = data['modelviews']
 		self._registry_plugins = data['plugins']
 
-	def register_modelview(self, path, view_class, name):
-		from xadmin.views.base import BaseAdminView
-		if issubclass(view_class, BaseAdminView):
-			if not isinstance(path, (AdminUrl, AdminPath)):
-				if view_class is None:
-					raise ImproperlyConfigured('view_class not set!')
-				path = AdminUrl(path, view_class, name)
-			self._registry_modelviews.append(path)
-		else:
-			raise ImproperlyConfigured('The registered view class %s isn\'t subclass of %s' %
-			                           (view_class.__name__, BaseAdminView.__name__))
+	def register_modelview(self, path, view_class=None, name=None):
+		if not isinstance(path, (AdminUrl, AdminPath)):
+			if view_class is None:
+				raise ImproperlyConfigured('view_class not set!')
+			path = AdminUrl(path, view_class, name)
+		self._registry_modelviews.append(path)
 
 	def register_view(self, path, view_class=None, name=None, **kwargs):
 		"""Register a new view on the website (BaseAdminView)"""
@@ -621,7 +616,7 @@ class AdminSite:
 				model_urlpatterns.append(view_spec(model_wrapped_view, route=view_spec.route, name=name))
 			if (route := getattr(admin_class, 'admin_path', None)) is None:
 				urlpatterns.append(
-					re_path(r'^%s/%s/' % (opts.app_label, opts.model_name), include(model_urlpatterns))
+					dj_path(f'{opts.app_label}/{opts.model_name}/', include(model_urlpatterns))
 				)
 			elif isinstance(route, AdminRoute):
 				urlpatterns += [route(model_urlpatterns)]

@@ -11,7 +11,7 @@ from django.utils.translation import gettext as _
 
 from xadmin.layout import FormHelper
 from xadmin.plugins.ajax import JsonErrorDict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.util import lookup_field, display_for_field, label_for_field, unquote, boolean_icon
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView, ListAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
@@ -166,4 +166,4 @@ class EditPatchView(ModelFormAdminView, ListAdminView):
 
 
 site.register_plugin(EditablePlugin, ListAdminView)
-site.register_modelview(r'^(.+)/patch/$', EditPatchView, name='%s_%s_patch')
+site.register_modelview(AdminPath('<path:object_id>/patch/', EditPatchView, name='%s_%s_patch'))

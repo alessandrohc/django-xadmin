@@ -10,7 +10,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 
 from xadmin.plugins.utils import get_context_dict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.views import (
 	BaseAdminPlugin, ModelAdminView, ListAdminView
 )
@@ -96,4 +96,4 @@ class SaveOrderView(ModelAdminView):
 
 
 site.register_plugin(SortableListPlugin, ListAdminView)
-site.register_modelview(r'^save-order/$', SaveOrderView, name='%s_%s_save_order')
+site.register_modelview(AdminPath('save-order/', SaveOrderView, name='%s_%s_save_order'))

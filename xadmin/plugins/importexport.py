@@ -61,7 +61,7 @@ from import_export.results import RowResult
 from import_export.signals import post_export, post_import
 from import_export.tmp_storages import TempFolderStorage
 from xadmin.plugins.utils import get_context_dict
-from xadmin.sites import site
+from xadmin.sites import site, AdminPath
 from xadmin.views import BaseAdminPlugin, ListAdminView, ModelAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
 
@@ -547,9 +547,9 @@ class ExportPlugin(ExportMixin, BaseAdminPlugin):
 			post_export.send(sender=None, model=self.model)
 			return response
 
-
-site.register_modelview(r'^import/$', ImportView, name='%s_%s_import')
-site.register_modelview(r'^process_import/$', ImportProcessView, name='%s_%s_process_import')
+#
+site.register_modelview(AdminPath('import/', ImportView, name='%s_%s_import'))
+site.register_modelview(AdminPath('process_import/', ImportProcessView, name='%s_%s_process_import'))
 site.register_plugin(ImportMenuPlugin, ListAdminView)
 site.register_plugin(ExportMenuPlugin, ListAdminView)
 site.register_plugin(ExportPlugin, ListAdminView)
