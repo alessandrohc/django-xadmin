@@ -33,12 +33,12 @@ def register_builtin_views(site):
 	site.register_modelview(AdminPath('', ListAdminView, name='%s_%s_changelist'))
 	site.register_modelview(AdminPath('add/', CreateAdminView, name='%s_%s_add'))
 	site.register_modelview(
-		AdminPath('<path:object_id>/delete/', DeleteAdminView, name='%s_%s_delete'))
+		AdminPath('<str:object_id>/delete/', DeleteAdminView, name='%s_%s_delete'))
 	site.register_modelview(
-		AdminPath('<path:object_id>/update/', UpdateAdminView, name='%s_%s_change'))
+		AdminPath('<str:object_id>/update/', UpdateAdminView, name='%s_%s_change'))
 	site.register_modelview(
-		AdminPath('<path:object_id>/detail/', DetailAdminView, name='%s_%s_detail'))
+		AdminPath('<str:object_id>/detail/', DetailAdminView, name='%s_%s_detail'))
 	site.register_modelview(
-		AdminPath('<path:object_id>/dashboard/', ModelDashboard, name='%s_%s_dashboard'))
+		AdminPath('<str:object_id>/dashboard/', ModelDashboard, name='%s_%s_dashboard'))
 
 	site.set_loginview(LoginView)

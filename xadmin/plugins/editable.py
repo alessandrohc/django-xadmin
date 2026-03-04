@@ -166,4 +166,4 @@ class EditPatchView(ModelFormAdminView, ListAdminView):
 
 
 site.register_plugin(EditablePlugin, ListAdminView)
-site.register_modelview(AdminPath('<path:object_id>/patch/', EditPatchView, name='%s_%s_patch'))
+site.register_modelview(AdminPath('<str:object_id>/patch/', EditPatchView, name='%s_%s_patch'))
