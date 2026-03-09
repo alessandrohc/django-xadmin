@@ -169,6 +169,7 @@ class AdminSite:
 		self._admin_view_cache = {}
 		self._admin_view_opts_cache = {}
 		self._admin_plugins_cache = {}
+		self._admin_merge_attrs_cache = {}  # (option_class, plugin_class) -> attrs
 
 		self.model_admins_order = 0
 
@@ -415,6 +416,10 @@ class AdminSite:
 		return update_wrapper(inner, view)
 
 	def _get_merge_attrs(self, option_class, plugin_class):
+		cache_key = (option_class, plugin_class)
+		cached = self._admin_merge_attrs_cache.get(cache_key)
+		if cached is not None:
+			return cached
 		attrs = {}
 		options = self._admin_plugins_cache.get(option_class)
 		if options is None:
@@ -428,6 +433,7 @@ class AdminSite:
 			# accepts configuration methods and classes.
 			if not callable(attr) or inspect.isclass(attr):
 				attrs[name] = attr
+		self._admin_merge_attrs_cache[cache_key] = attrs
 		return attrs
 
 	def _get_settings_class(self, view_class):
