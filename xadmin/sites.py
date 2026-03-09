@@ -1,7 +1,7 @@
 # coding=utf-8
 import functools
 import inspect
-from functools import update_wrapper
+from functools import update_wrapper, lru_cache
 from django.template.engine import Engine
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -21,13 +21,13 @@ class NotRegistered(Exception):
 class MergeAdminMetaclass(type):
 
 	def __new__(cls, name, bases, attrs):
-		# classe de referência para o novo objeto
+		# reference class for the new object
 		from xadmin.views.base import BaseAdminMergeView
 		return super().__new__(cls, str(name), (BaseAdminMergeView,) + bases, attrs)
 
 
 class AdminRoute:
-	"""Rota para incluir outras urls"""
+	"""Route to include other urls"""
 	path = re_path
 
 	def __init__(self, route, app_name=None, namespace=None):
@@ -43,7 +43,7 @@ class AdminRoute:
 
 @functools.total_ordering
 class AdminUrl:
-	"""Semelhante a urls django, guarda as definições de uma view
+	"""Similar to Django urls, stores the definitions of a view
 	"""
 	path = re_path
 
@@ -57,14 +57,14 @@ class AdminUrl:
 		self.initkwargs = kwargs.get('initkwargs', self.options)
 		self.include = AdminRoute(route, kwargs.get('app_name'),
 		                          kwargs.get('namespace'))
-		# se a view pode ser armazena com segurança no cache.
+		# whether the view can be safely stored in cache.
 		self.cacheable = False
-		# prioridade de carregamento
+		# loading priority
 		self.priority = kwargs.get('priority', 100)
 		self.include.path = self.path
 
 	def __call__(self, view, route=None, **options):
-		"""Constrói a url das configurações do objeto"""
+		"""Builds the url from the object settings"""
 		route = route or self.route
 		options.setdefault('name', self.name)
 		options.setdefault('kwargs', self.kwargs)
@@ -81,7 +81,7 @@ class AdminUrl:
 
 
 class AdminPath(AdminUrl):
-	"""Especificação de urls que não usam pattern"""
+	"""URL specification that does not use a pattern"""
 	path = dj_path
 
 
@@ -209,14 +209,14 @@ class AdminSite:
 	def update_view(self, path, view_class, name, target_name=None, **kwargs):
 		"""Register / update a view based on the path"""
 		for index, url in enumerate(self._registry_views):
-			# o tipo padrão é hidra url
+			# the default type is a hidra url
 			if isinstance(url, (list, tuple)):
 				url = AdminUrl(*url)
 			elif not isinstance(url, (AdminUrl, AdminPath)):
 				url = AdminUrl(None, url)
 			if target_name is None:
 				target_name = name
-			# atualiza o registro interno
+			# updates the internal registry
 			if url.route == path and url.name == target_name:
 				klass = url.__class__
 				# transforma em um objeto
@@ -469,8 +469,9 @@ class AdminSite:
 
 		return merge_class
 
+	@lru_cache(maxsize=None)
 	def get_plugins(self, admin_view_class, *option_classes):
-		"""Extrai os plugins registrados na hierarquia de views"""
+		"""Extracts the registered plugins in the view hierarchy"""
 		from xadmin.views import BaseAdminView
 		plugins = []
 		# option classes affect all plugins but the impact of this is mitigated by name caching
@@ -495,22 +496,25 @@ class AdminSite:
 						plugins.append(merge_func(plugin_class))
 		return plugins
 
-	def get_view_class(self, view_class, option_class=None, **opts):
-		plugins_options = [option_class] if option_class else []
-		merges = [option_class] if option_class else []
-		for klass in view_class.mro()[:-1]:  # exclude object
-			reg_avs_class = self._registry_avs.get(klass)
-			if reg_avs_class:
-				plugins_options.append(reg_avs_class)
-				merges.append(reg_avs_class)
-			settings_class = self._get_settings_class(klass)
-			if settings_class:
-				merges.append(settings_class)
-			merges.append(klass)
-		merge_class_name = ''.join([c.__name__ for c in merges])
-		if (view_class_merge := self._admin_view_cache.get(merge_class_name)) is None:
+	def get_view_class(self, view_class, option_class=None, nocache=False, **opts):
+		option_class_key = option_class.__name__ if option_class else ''
+		view_class_name = f'{view_class.__module__}.{view_class.__name__}:{option_class_key}'
+		view_class_merge = None if nocache else self._admin_view_cache.get(view_class_name)
+		if view_class_merge is None:
+			plugins_options = [option_class] if option_class else []
+			merges = [option_class] if option_class else []
+			for klass in view_class.mro()[:-1]:  # exclude object
+				reg_avs_class = self._registry_avs.get(klass)
+				if reg_avs_class:
+					plugins_options.append(reg_avs_class)
+					merges.append(reg_avs_class)
+				settings_class = self._get_settings_class(klass)
+				if settings_class:
+					merges.append(settings_class)
+				merges.append(klass)
+			merge_class_name = ''.join([c.__name__ for c in merges])
 			plugins = self.get_plugins(view_class, *plugins_options)
-			self._admin_view_cache[merge_class_name] = view_class_merge = MergeAdminMetaclass(
+			self._admin_view_cache[view_class_name] = view_class_merge = MergeAdminMetaclass(
 				f"{view_class.__name__}Merge{len(merges)}", tuple(merges),
 				dict({'admin_site': self,
 				      'plugin_classes': plugins,
@@ -557,24 +561,24 @@ class AdminSite:
 						url = AdminUrl(*url)
 					elif not isinstance(url, AdminUrl):
 						url = AdminUrl(None, url)
-					# converte as class view para instance view
+					# converts class views to instance views
 					if inspect.isclass(url.cls_func) and issubclass(url.cls_func, base_view_class):
 						view = wrap(self.create_admin_view(url.cls_func, initargs=url.initargs,
 						                                   initkwargs=url.initkwargs),
 						            cacheable=url.cacheable)
 					elif isinstance(url, AdminUrl) and not callable(url.cls_func):
-						# esse caso representa urls dentro de urls indefinidamente
+						# this case represents nested urls indefinitely
 						nested_urls = self._get_nested_urls([url], base_view_class)
 						view_urls.extend(nested_urls)
 						continue
 					else:
-						# hardcore: a view é uma função que cria suas próprias urls
+						# edge case: the view is a function that creates its own urls
 						try:
 							view = include(url.cls_func(self))
 						except TypeError as exc:
 							raise ImproperlyConfigured(f"admin view include {url.cls_func}\n{exc}")
 					view_urls.append(url(view))
-				# guarda o conjunto de urls no namespace
+				# stores the url set in the namespace
 				urlpatterns.append(view_spec.include(view_urls))
 				continue
 			elif inspect.isclass(view_spec.cls_func) and issubclass(view_spec.cls_func, base_view_class):
