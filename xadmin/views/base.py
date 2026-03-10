@@ -392,6 +392,11 @@ class BaseAdminView(BaseAdminObject, View):
 
 		self.plugin_manager = PluginManager(self)
 
+		# Compat for older url re
+		object_id = kwargs.pop('object_id', None)
+		if object_id:
+			args = (object_id,) + args
+
 		self.init_plugin(*args, **kwargs)
 		self.init_request(*args, **kwargs)
 		self.setup_view(*args, **kwargs)
