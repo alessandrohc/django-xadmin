@@ -18,7 +18,11 @@
       </button>
     </div>
     {% endif %}
-    
+
+    {% if show_cancel_link %}
+        <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans 'Cancel' %}</a>
+    {% endif %}
+
     {% if show_delete_link %}
       <a href="{{ delete_url }}" class="btn btn-danger deletelink px-5"><i class="fa fa-trash-alt"></i></a>
     {% endif %}
@@ -33,6 +37,10 @@
   
   {% if show_delete_link %}
     <a href="{{ delete_url }}" class="btn btn-danger deletelink float-right d-none d-md-inline-block"><i class="fa fa-trash-alt"></i> {% trans "Delete" %}</a>
+  {% endif %}
+
+  {% if show_cancel_link %}
+    <a href="{{ cancel_url }}" class="btn btn-secondary float-right d-none d-md-inline-block ml-0 mr-2">{% trans 'Cancel' %}</a>
   {% endif %}
 
   {% view_block 'submit_line' %}
