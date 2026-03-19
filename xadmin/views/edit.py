@@ -79,6 +79,10 @@ class ModelFormAdminView(ModelAdminView):
 	save_as = False
 	save_on_top = False
 
+	# when set, shows the Cancel button in submit_line;
+	# use True to redirect to the model changelist or provide a literal URL
+	cancel_url = None
+
 	add_form_template = None
 	change_form_template = None
 
@@ -378,12 +382,20 @@ class ModelFormAdminView(ModelAdminView):
 			'show_save_and_add_another': new_context['has_add_permission'] and
 			                             (not self.save_as or add),
 			'show_save_and_continue': new_context['has_change_permission'],
-			'show_save': True
+			'show_save': True,
+			'show_cancel_link': bool(self.cancel_url),
 		})
 
 		if self.org_obj and new_context['show_delete_link']:
 			new_context['delete_url'] = self.model_admin_url(
 				'delete', self.org_obj.pk)
+
+		# resolve the Cancel button URL:
+		# True → model changelist; string → literal URL
+		if self.cancel_url is True:
+			new_context['cancel_url'] = self.model_admin_url('changelist')
+		elif self.cancel_url:
+			new_context['cancel_url'] = self.cancel_url
 
 		context = super(ModelFormAdminView, self).get_context()
 		context.update(new_context)
