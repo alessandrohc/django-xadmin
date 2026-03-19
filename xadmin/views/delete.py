@@ -8,7 +8,7 @@ from django.utils.translation import gettext as _
 
 from xadmin.util import get_deleted_objects
 from xadmin.util import unquote
-from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m
+from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m, get_obj_label
 
 
 class DeleteAdminView(ModelAdminView):
@@ -90,7 +90,7 @@ class DeleteAdminView(ModelAdminView):
 	@filter_hook
 	def get_breadcrumb(self):
 		bcs = super(DeleteAdminView, self).get_breadcrumb()
-		item = {'title': force_str(self.obj)}
+		item = {'title': get_obj_label(self.obj)}
 		if url := self.get_object_url(self.obj):
 			item['url'] = url
 		bcs.append(item)

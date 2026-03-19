@@ -21,7 +21,7 @@ from django.core.exceptions import FieldDoesNotExist
 from xadmin import widgets
 from xadmin.layout import FormHelper, Layout, Fieldset, TabHolder, Container, Column, Col, Field, Tab
 from xadmin.util import unquote
-from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m
+from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m, get_obj_label
 from xadmin.views.detail import DetailAdminUtil
 from xadmin.views.utils import ListQuery
 
@@ -538,7 +538,7 @@ class UpdateAdminView(ModelFormAdminView):
 	@filter_hook
 	def get_context(self):
 		new_context = {
-			'title': _('Change %s') % force_str(self.org_obj),
+			'title': mark_safe(_('Change %s') % get_obj_label(self.org_obj)),
 			'object_id': str(self.org_obj.pk),
 		}
 		context = super(UpdateAdminView, self).get_context()
@@ -556,7 +556,7 @@ class UpdateAdminView(ModelFormAdminView):
 	def get_breadcrumb(self):
 		bcs = super(ModelFormAdminView, self).get_breadcrumb()
 
-		item = {'title': force_str(self.org_obj)}
+		item = {'title': get_obj_label(self.org_obj)}
 		if self.has_change_permission():
 			item['url'] = self.model_admin_url('change', self.org_obj.pk)
 		bcs.append(item)

@@ -17,7 +17,7 @@ from django.utils.translation import gettext as _
 
 from xadmin.layout import FormHelper, Layout, Fieldset, Container, Column, Field, Col, TabHolder, Tab
 from xadmin.util import unquote, lookup_field, display_for_field, boolean_icon, label_for_field
-from xadmin.views.base import ModelAdminView, filter_hook, csrf_protect_m
+from xadmin.views.base import ModelAdminView, filter_hook, get_obj_label, csrf_protect_m
 
 # Text to display within change-list table cells if the value is blank.
 EMPTY_CHANGELIST_VALUE = _('Null')
@@ -301,7 +301,7 @@ class DetailAdminView(ModelAdminView):
 	@filter_hook
 	def get_breadcrumb(self):
 		bcs = super(DetailAdminView, self).get_breadcrumb()
-		item = {'title': force_str(self.obj)}
+		item = {'title': get_obj_label(self.obj)}
 		if self.has_view_permission():
 			item['url'] = self.model_admin_url('detail', self.obj.pk)
 		bcs.append(item)

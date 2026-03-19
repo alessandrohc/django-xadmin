@@ -20,7 +20,7 @@ from django.urls.base import reverse
 from django.utils.decorators import method_decorator, classonlymethod
 from django.utils.encoding import force_str, smart_str
 from django.utils.functional import Promise
-from django.utils.html import escape
+from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.itercompat import is_iterable
 from django.utils.safestring import mark_safe
@@ -33,6 +33,17 @@ from xadmin.models import Log
 from xadmin.util import static, json, vendor, sortkeypicker, HtmlFlatData
 
 csrf_protect_m = method_decorator(csrf_protect)
+
+
+def get_obj_label(obj):
+	"""
+	Returns the display label for an object used in xadmin breadcrumbs and page titles.
+	If the object implements get_xadmin_label(), its return value is used as safe HTML.
+	Otherwise, strip_tags(force_str(obj)) is used to ensure plain text output.
+	"""
+	if hasattr(obj, 'get_xadmin_label'):
+		return mark_safe(obj.get_xadmin_label())
+	return strip_tags(force_str(obj))
 
 
 class IncorrectPluginArg(Exception):
