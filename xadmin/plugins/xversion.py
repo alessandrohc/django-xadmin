@@ -1,9 +1,15 @@
 import hashlib
+import inspect
+import logging
 from collections import defaultdict
 
 import reversion
 from contextlib import contextmanager
 from functools import partial
+
+# Module-level logger. Configure the 'xadmin.xversion' namespace (or the root
+# logger) in Django's LOGGING setting to capture revision failures in production.
+logger = logging.getLogger('xadmin.xversion')
 
 import re
 from crispy_forms.utils import TEMPLATE_PACK
@@ -87,17 +93,55 @@ def _register_model(admin, model):
 
 
 def register_models(admin_site=None):
+	"""Registers all xadmin models that have reversion_enable=True with django-reversion.
+
+	Called eagerly from XAdminConfig.ready() so that every model is registered
+	before the first HTTP request, Celery task or management command runs.
+	A lazy fallback still exists in ReversionRegisterPlugin.setup() for models
+	whose adminx.py is loaded after XAdminConfig.ready() completes.
+	"""
 	if admin_site is None:
 		admin_site = site
 
 	for model, admin in admin_site._registry.items():
 		if getattr(admin, 'reversion_enable', False):
-			_register_model(admin, model)
+			# Skip admins whose inlines are a @property — they require a live
+			# request instance to resolve and will be registered lazily on first
+			# admin access via ReversionRegisterPlugin.setup().
+			if isinstance(inspect.getattr_static(admin, 'inlines', None), property):
+				continue
+			try:
+				_register_model(admin, model)
+			except Exception:
+				# Unexpected registration failure — log and defer to lazy fallback.
+				logger.exception(
+					"Could not eagerly register model '%s' with reversion; "
+					"will fall back to per-request registration",
+					model.__name__,
+				)
+
+
+@contextmanager
+def safe_revision_context(label=""):
+	"""Context manager that wraps revision creation with error logging.
+
+	Logs any exception that prevents the revision from being committed, then
+	re-raises so that the caller is aware of the failure.
+	"""
+	try:
+		with create_revision():
+			yield
+	except Exception:
+		logger.exception(
+			"Failed to create reversion revision%s",
+			f" [{label}]" if label else "",
+		)
+		raise
 
 
 @contextmanager
 def do_create_revision(request):
-	with create_revision():
+	with safe_revision_context(label=f"user={request.user}"):
 		set_user(request.user)
 		yield
 
@@ -118,7 +162,26 @@ class ReversionRegisterPlugin(BaseAdminPlugin):
 		# The inlines are linked to the view instance and were created dynamically.
 		if not self.admin_view_inlines and getattr(self.admin_view, "inlines", ()):
 			unregister(self.model)
-			_register_model(self.admin_view, self.model)
+			try:
+				_register_model(self.admin_view, self.model)
+			except Exception:
+				# Re-registration failed after unregister — attempt a basic fallback
+				# registration to avoid leaving the model in an unregistered state.
+				logger.exception(
+					"Failed to re-register model '%s' with reversion after inline "
+					"discovery; attempting basic fallback registration",
+					self.model.__name__,
+				)
+				if not is_registered(self.model):
+					try:
+						register(self.model)
+					except Exception:
+						logger.exception(
+							"Fallback registration also failed for model '%s'; "
+							"revision tracking may be disabled for this model in "
+							"this process instance",
+							self.model.__name__,
+						)
 
 
 class ReversionPlugin(ReversionRegisterPlugin):
@@ -141,8 +204,10 @@ class ReversionPlugin(ReversionRegisterPlugin):
 		self._cache = {}
 
 	def save_models(self, __):
-		# fix: DatabaseError: Save with update_fields did not affect any rows
-		if hasattr(self.admin_view, "new_obj") and self.admin_view.new_obj.pk:
+		# Signal to models that use update_fields conditionally (e.g. recover of
+		# deleted objects) that a full save is required — including when pk is
+		# absent (object being recovered has no pk yet).
+		if hasattr(self.admin_view, "new_obj") and self.admin_view.new_obj is not None:
 			self.admin_view.new_obj.reversion = True
 		return __()
 
@@ -408,7 +473,7 @@ class RevisionListView(BaseReversionView):
 					and len(value_a) == len(value_b) and is_diff):
 				is_diff = False
 				for i in range(len(value_a)):
-					if value_a[i] != value_a[i]:
+					if value_a[i] != value_b[i]:
 						is_diff = True
 						break
 			if isinstance(value_a, QuerySet) and isinstance(value_b, QuerySet):
@@ -492,35 +557,63 @@ class RevisionListView(BaseReversionView):
 		related_versions = OrderedDefaultDict(list)
 		for related_field in obj._meta.related_objects:
 			related_model = related_field.related_model
-			ctype = ContentType.objects.get_for_model(related_model)
-			versions = Version.objects.filter(
-				revision=revision,
-				content_type=ctype
-			).order_by("-revision__date_created")
+			try:
+				ctype = ContentType.objects.get_for_model(related_model)
+				# Filter is already scoped to a single revision — no ordering needed.
+				versions = Version.objects.filter(
+					revision=revision,
+					content_type=ctype,
+				)
 
-			if versions.exists() and not is_registered(related_model):
-				# Required to retrieve the updated object.
-				_autoregister(self, related_model)
+				if versions.exists() and not is_registered(related_model):
+					# Required to retrieve the updated object.
+					_autoregister(self, related_model)
 
-			for related_version in versions:
-				related_versions[related_model].append(related_version._object_version.object)
+				for related_version in versions:
+					try:
+						related_versions[related_model].append(
+							related_version._object_version.object
+						)
+					except Exception:
+						logger.exception(
+							"Failed to deserialize related version pk=%s for model '%s' "
+							"in revision pk=%s",
+							related_version.pk,
+							related_model.__name__,
+							revision.pk,
+						)
+			except Exception:
+				logger.exception(
+					"Failed to retrieve related versions for model '%s' in revision pk=%s",
+					related_model.__name__,
+					revision.pk,
+				)
 		return related_versions
 
 	def get_version_object(self, version):
-		obj_version = version._object_version
-		obj = obj_version.object
-		obj._state.db = self.obj._state.db
+		try:
+			obj_version = version._object_version
+			obj = obj_version.object
+			obj._state.db = self.obj._state.db
 
-		for field_name, pks in obj_version.m2m_data.items():
-			field = self.opts.get_field(field_name)
-			if hasattr(field, 'remote_field') and isinstance(field.remote_field, models.ManyToManyRel):
-				getattr(obj, field.name).set(
-					field.remote_field.model._default_manager.get_queryset().filter(pk__in=pks).all()
-				)
+			for field_name, pks in obj_version.m2m_data.items():
+				field = self.opts.get_field(field_name)
+				if hasattr(field, 'remote_field') and isinstance(field.remote_field, models.ManyToManyRel):
+					getattr(obj, field.name).set(
+						field.remote_field.model._default_manager.get_queryset().filter(pk__in=pks).all()
+					)
 
-		detail = self._get_detail_view(obj)
-		detail.related_versions = self._get_related_versions(version.revision, obj)
-		return obj, detail
+			detail = self._get_detail_view(obj)
+			detail.related_versions = self._get_related_versions(version.revision, obj)
+			return obj, detail
+		except Exception:
+			logger.exception(
+				"Failed to deserialize version pk=%s (object_id=%s) for model '%s'",
+				version.pk,
+				version.object_id,
+				self.model.__name__,
+			)
+			raise
 
 	def post(self, request, object_id, *args, **kwargs):
 		object_id = unquote(object_id)
