@@ -20,25 +20,40 @@ AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
 
 def add_view_permissions(sender, **kwargs):
 	"""
-	This syncdb hooks takes care of adding a view permission too all our
-	content types.
+	This post_migrate hook ensures a "view" permission exists for every
+	content type. Uses bulk operations to avoid N+1 queries:
+	  1. Fetch all content types (1 query)
+	  2. Fetch all existing view_* permissions (1 query)
+	  3. Bulk-create only the missing ones (1 query)
 	"""
-	# for each of our content types
-	for content_type in ContentType.objects.all():
-		# build our permission slug
-		codename = "view_%s" % content_type.model
+	# fetch all content types in a single query
+	all_content_types = ContentType.objects.all()
 
-		# if it doesn't exist..
-		if not Permission.objects.filter(content_type=content_type, codename=codename):
-			# add it
-			Permission.objects.create(content_type=content_type,
-			                          codename=codename,
-			                          name="Can view %s" % content_type.name)
-		# print "Added view permission for %s" % content_type.name
+	# build a set of (content_type_id, codename) for O(1) lookup — 1 query
+	existing_view_permissions = set(
+		Permission.objects.filter(codename__startswith="view_").values_list(
+			"content_type_id", "codename"
+		)
+	)
+
+	# determine which permissions are missing — pure in-memory comparison
+	permissions_to_create = [
+		Permission(
+			content_type=content_type,
+			codename="view_%s" % content_type.model,
+			name="Can view %s" % content_type.name,
+		)
+		for content_type in all_content_types
+		if (content_type.pk, "view_%s" % content_type.model) not in existing_view_permissions
+	]
+
+	# bulk-create all missing permissions in a single query
+	if permissions_to_create:
+		Permission.objects.bulk_create(permissions_to_create, ignore_conflicts=True)
 
 
-# check for all our view permissions after a syncdb
-post_migrate.connect(add_view_permissions)
+# ensure view permissions exist after every migration
+post_migrate.connect(add_view_permissions, dispatch_uid="xadmin_add_view_permissions")
 
 
 class Bookmark(models.Model):
