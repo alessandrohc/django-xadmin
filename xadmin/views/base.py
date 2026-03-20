@@ -281,19 +281,12 @@ class BaseAdminObject:
 		return vendor(*tags)
 
 	def log(self, flag, message, obj=None):
-		log = Log(
-			user=self.user,
-			ip_addr=self.request.META['REMOTE_ADDR'],
-			action_flag=flag,
-			message=message
-		)
-		if obj:
-			log.content_type = get_content_type_for_model(obj)
-			log.object_id = obj.pk
-			# Limits the representation to the maximum size of the field.
-			log.object_repr = Truncator(force_str(obj)).chars(log.object_repr_length)
-		log.save()
-		return log
+		# lazy import to avoid circular dependency with xadmin.auditlog
+		from xadmin.auditlog import AuditLog
+		# normalize legacy xadmin flag ('change') to the unified standard ('update')
+		if flag == 'change':
+			flag = 'update'
+		return AuditLog._log(self.request, flag, obj, message)
 
 
 @functools.total_ordering

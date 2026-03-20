@@ -175,13 +175,21 @@ class Log(models.Model):
 	def __str__(self):
 		if self.action_flag == 'create':
 			return gettext('Added "%(object)s".') % {'object': self.object_repr}
-		elif self.action_flag == 'change':
+		elif self.action_flag in ('update', 'change'):
 			return gettext('Changed "%(object)s" - %(changes)s') % {
 				'object': self.object_repr,
 				'changes': self.message,
 			}
-		elif self.action_flag == 'delete' and self.object_repr:
-			return gettext('Deleted "%(object)s."') % {'object': self.object_repr}
+		elif self.action_flag == 'delete':
+			if self.object_repr:
+				return gettext('Deleted "%(object)s."') % {'object': self.object_repr}
+			return gettext('Deleted object.')
+		elif self.action_flag == 'move' and self.object_repr:
+			return gettext('Moved "%(object)s."') % {'object': self.object_repr}
+		elif self.action_flag == 'copy' and self.object_repr:
+			return gettext('Copied "%(object)s."') % {'object': self.object_repr}
+		elif self.action_flag == 'duplicate' and self.object_repr:
+			return gettext('Duplicated "%(object)s."') % {'object': self.object_repr}
 
 		return self.message
 

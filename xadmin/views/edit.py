@@ -313,7 +313,7 @@ class ModelFormAdminView(ModelAdminView):
 	@filter_hook
 	def save_models(self):
 		self.new_obj.save()
-		flag = self.org_obj is None and 'create' or 'change'
+		flag = self.org_obj is None and 'create' or 'update'
 		self.log(flag, self.change_message(), self.new_obj)
 
 	@filter_hook
