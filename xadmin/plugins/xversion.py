@@ -204,11 +204,22 @@ class ReversionPlugin(ReversionRegisterPlugin):
 		self._cache = {}
 
 	def save_models(self, __):
-		# Signal to models that use update_fields conditionally (e.g. recover of
-		# deleted objects) that a full save is required — including when pk is
-		# absent (object being recovered has no pk yet).
-		if hasattr(self.admin_view, "new_obj") and self.admin_view.new_obj is not None:
-			self.admin_view.new_obj.reversion = True
+		obj = getattr(self.admin_view, "new_obj", None)
+		if obj is not None:
+			obj.reversion = True
+			# When recovering a deleted object (RecoverView and row absent from
+			# the database), mark the instance so that Django performs an INSERT
+			# instead of an UPDATE.  The ``_xadmin_recover_insert`` flag is a
+			# public contract: other plugins may inspect it to reset library-
+			# specific state that would otherwise cause the INSERT to fail (e.g.
+			# tree fields managed by django-mptt).
+			if (
+				isinstance(self.admin_view, RecoverView)
+				and obj.pk is not None
+				and not self._check_object_recover(obj)
+			):
+				obj._state.adding = True
+				obj._xadmin_recover_insert = True
 		return __()
 
 	def do_post(self, __):
