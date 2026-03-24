@@ -11,7 +11,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xadmin-core\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2024-12-11 17:20-0300\n"
+"POT-Creation-Date: 2026-03-24 15:41-0300\n"
 "PO-Revision-Date: 2013-11-20 10:21+0000\n"
 "Last-Translator: gladson <gladson@immensa.com.br>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/"
@@ -29,6 +29,29 @@ msgstr "Administrar objeto"
 #: xadmin/apps.py:11
 msgid "Administration"
 msgstr "Administração"
+
+#: xadmin/auditlog.py:73 xadmin/views/edit.py:308
+#, python-format
+msgid "Changed %s."
+msgstr "Alterado %s"
+
+#: xadmin/auditlog.py:74 xadmin/views/edit.py:308
+msgid "and"
+msgstr "e"
+
+#: xadmin/auditlog.py:134
+msgid "multiple fields"
+msgstr "múltiplos campos"
+
+#: xadmin/auditlog.py:135
+#, python-format
+msgid "Batch updated %(count)d objects - %(fields)s [pks: %(pks)s]"
+msgstr "Atualizado %(count)d objetos em lote - %(fields)s [ids: %(pks)s]"
+
+#: xadmin/auditlog.py:170
+#, python-format
+msgid "Batch deleted %(count)d objects [pks: %(pks)s]"
+msgstr "Removido %(count)d objetos em lote [pks: %(pks)s]"
 
 #: xadmin/filters.py:168 xadmin/filters.py:206 xadmin/filters.py:438
 #: xadmin/filters.py:534 xadmin/filters.py:574
@@ -87,161 +110,175 @@ msgstr ""
 msgid "Please log in again, because your session has expired."
 msgstr "Por favor faça login novamente, porque a sua sessão expirou."
 
-#: xadmin/models.py:45
+#: xadmin/models.py:60
 msgid "Title"
 msgstr "Título"
 
-#: xadmin/models.py:46 xadmin/models.py:86 xadmin/models.py:105
-#: xadmin/models.py:148
+#: xadmin/models.py:61 xadmin/models.py:101 xadmin/models.py:120
+#: xadmin/models.py:163
 msgid "user"
 msgstr "Usuário"
 
-#: xadmin/models.py:47
+#: xadmin/models.py:62
 msgid "Url Name"
 msgstr "Nome da Url"
 
-#: xadmin/models.py:49
+#: xadmin/models.py:64
 msgid "Query String"
 msgstr "String de Consulta"
 
-#: xadmin/models.py:50
+#: xadmin/models.py:65
 msgid "Is Shared"
 msgstr "É Compartilhada"
 
-#: xadmin/models.py:63 xadmin/plugins/bookmark.py:56
+#: xadmin/models.py:78 xadmin/plugins/bookmark.py:56
 #: xadmin/plugins/bookmark.py:192
 msgid "Bookmark"
 msgstr "Favorito"
 
-#: xadmin/models.py:64
+#: xadmin/models.py:79
 msgid "Bookmarks"
 msgstr "Favoritos"
 
-#: xadmin/models.py:87
+#: xadmin/models.py:102
 msgid "Settings Key"
 msgstr "Configuração da chave"
 
-#: xadmin/models.py:88
+#: xadmin/models.py:103
 msgid "Settings Content"
 msgstr "Configurações de conteúdo"
 
-#: xadmin/models.py:100
+#: xadmin/models.py:115
 msgid "User Setting"
 msgstr "Configuração de usuário"
 
-#: xadmin/models.py:101
+#: xadmin/models.py:116
 msgid "User Settings"
 msgstr "Configurações do Usuário"
 
-#: xadmin/models.py:106
+#: xadmin/models.py:121
 msgid "Page"
 msgstr "Página"
 
-#: xadmin/models.py:107 xadmin/views/dashboard.py:83
+#: xadmin/models.py:122 xadmin/views/dashboard.py:83
 #: xadmin/views/dashboard.py:98
 msgid "Widget Type"
 msgstr "Tipo de Widget"
 
-#: xadmin/models.py:108 xadmin/views/dashboard.py:84
+#: xadmin/models.py:123 xadmin/views/dashboard.py:84
 msgid "Widget Params"
 msgstr "Parâmetros do Widget"
 
-#: xadmin/models.py:135
+#: xadmin/models.py:150
 msgid "User Widget"
 msgstr "Widget do Usuário"
 
-#: xadmin/models.py:136
+#: xadmin/models.py:151
 msgid "User Widgets"
 msgstr "Widgets do Usuário"
 
-#: xadmin/models.py:141
+#: xadmin/models.py:156
 msgid "action time"
 msgstr "Data da ação"
 
-#: xadmin/models.py:150
+#: xadmin/models.py:165
 msgid "action ip"
 msgstr "IP da ação"
 
-#: xadmin/models.py:154
+#: xadmin/models.py:169
 msgid "content type"
 msgstr "Tipo de conteúdo"
 
-#: xadmin/models.py:157
+#: xadmin/models.py:172
 msgid "object id"
 msgstr "ID do objeto"
 
-#: xadmin/models.py:158
+#: xadmin/models.py:173
 msgid "object repr"
 msgstr "Objeto"
 
-#: xadmin/models.py:159
+#: xadmin/models.py:174
 msgid "action flag"
 msgstr "Ação"
 
-#: xadmin/models.py:160
+#: xadmin/models.py:175
 msgid "change message"
 msgstr "Descrição"
 
-#: xadmin/models.py:163
+#: xadmin/models.py:178
 msgid "log entry"
 msgstr "Histórico de dados"
 
-#: xadmin/models.py:164
+#: xadmin/models.py:179
 msgid "log entries"
 msgstr "Histórico de ações"
 
-#: xadmin/models.py:177
+#: xadmin/models.py:192
 #, python-format
 msgid "Added \"%(object)s\"."
 msgstr "Adicionado \"%(object)s\"."
 
-#: xadmin/models.py:179
+#: xadmin/models.py:194
 #, python-format
 msgid "Changed \"%(object)s\" - %(changes)s"
 msgstr "Alterado \"%(object)s\" - %(changes)s"
 
-#: xadmin/models.py:184
+#: xadmin/models.py:200
 #, python-format
 msgid "Deleted \"%(object)s.\""
 msgstr "\"%(object)s\" removido."
+
+#: xadmin/models.py:201
+msgid "Deleted object."
+msgstr "Objeto removido."
+
+#: xadmin/models.py:203
+#, python-format
+msgid "Moved \"%(object)s.\""
+msgstr "\"%(object)s\" movido."
+
+#: xadmin/models.py:205
+#, python-format
+msgid "Copied \"%(object)s.\""
+msgstr "\"%(object)s\" copiado."
+
+#: xadmin/models.py:207
+#, python-format
+msgid "Duplicated \"%(object)s.\""
+msgstr "\"%(object)s\" duplicado."
 
 #: xadmin/plugins/actions.py:62
 #, python-format
 msgid "Delete selected %(verbose_name_plural)s"
 msgstr "Excluir %(verbose_name_plural)s selecionados"
 
-#: xadmin/plugins/actions.py:78
-#, python-format
-msgid "Batch delete %(count)d %(items)s."
-msgstr "Removido %(count)d %(items)s em lote."
-
-#: xadmin/plugins/actions.py:84
+#: xadmin/plugins/actions.py:82
 #, python-format
 msgid "Successfully deleted %(count)d %(items)s."
 msgstr "Excluído com sucesso %(count)d %(items)s."
 
-#: xadmin/plugins/actions.py:125 xadmin/views/delete.py:74
+#: xadmin/plugins/actions.py:123 xadmin/views/delete.py:74
 #, python-format
 msgid "Cannot delete %(name)s"
 msgstr "Não é possível excluir %(name)s"
 
-#: xadmin/plugins/actions.py:127 xadmin/views/delete.py:77
+#: xadmin/plugins/actions.py:125 xadmin/views/delete.py:77
 msgid "Are you sure?"
 msgstr "Você tem certeza?"
 
-#: xadmin/plugins/actions.py:178
+#: xadmin/plugins/actions.py:176
 #, python-format
 msgid "%(total_count)s selected"
 msgid_plural "All %(total_count)s selected"
 msgstr[0] "Todos %(total_count)s selecionados"
 msgstr[1] "Todos %(total_count)s selecionados"
 
-#: xadmin/plugins/actions.py:182
+#: xadmin/plugins/actions.py:180
 #, python-format
 msgid "0 of %(cnt)s selected"
 msgstr "0 de %(cnt)s selecionados"
 
-#: xadmin/plugins/actions.py:199 xadmin/plugins/actions.py:209
+#: xadmin/plugins/actions.py:197 xadmin/plugins/actions.py:207
 msgid ""
 "Items must be selected in order to perform actions on them. No items have "
 "been changed."
@@ -424,7 +461,7 @@ msgstr "Entrar %s"
 
 #: xadmin/plugins/editable.py:80 xadmin/views/dashboard.py:671
 #: xadmin/views/delete.py:25 xadmin/views/detail.py:170
-#: xadmin/views/edit.py:525
+#: xadmin/views/edit.py:537
 #, python-format
 msgid "%(name)s object with primary key %(key)r does not exist."
 msgstr "%(name)s objeto com chave primária %(key)r não existe."
@@ -526,21 +563,21 @@ msgstr "Redefinição de senha"
 msgid "Password reset by email"
 msgstr "Redefinição de senha por email"
 
-#: xadmin/plugins/passwords.py:80
+#: xadmin/plugins/passwords.py:79
 msgid "Forgotten your password or username?"
 msgstr "Esqueci minha senha ou nome de usuário"
 
-#: xadmin/plugins/passwords.py:87
+#: xadmin/plugins/passwords.py:86
 #: xadmin/templates/xadmin/auth/password_reset/confirm.html:15
 msgid "Enter new password"
 msgstr "Digite a nova senha"
 
-#: xadmin/plugins/passwords.py:130
+#: xadmin/plugins/passwords.py:129
 #: xadmin/templates/xadmin/auth/password_reset/complete.html:14
 msgid "Password reset successful"
 msgstr "Redefinição de senha completada."
 
-#: xadmin/plugins/quickform.py:215 xadmin/views/edit.py:541
+#: xadmin/plugins/quickform.py:215 xadmin/views/edit.py:553
 #, python-format
 msgid "Change %s"
 msgstr "Alterar %s"
@@ -550,93 +587,93 @@ msgstr "Alterar %s"
 msgid "Create New %s"
 msgstr "Criar novo %s"
 
-#: xadmin/plugins/relfield.py:31 xadmin/plugins/topnav.py:36
+#: xadmin/plugins/relfield.py:33 xadmin/plugins/topnav.py:36
 #, python-format
 msgid "Search %s"
 msgstr "Pesquisar %s"
 
-#: xadmin/plugins/relfield.py:71
+#: xadmin/plugins/relfield.py:73
 #, python-format
 msgid "Select %s"
 msgstr "Selecionar %s"
 
-#: xadmin/plugins/themes.py:67
+#: xadmin/plugins/themes.py:66
 msgid "Default"
 msgstr "Padrão"
 
-#: xadmin/plugins/themes.py:67
+#: xadmin/plugins/themes.py:66
 msgid "Default bootstrap theme"
 msgstr "Tema padrão bootstrap"
 
-#: xadmin/plugins/themes.py:68
+#: xadmin/plugins/themes.py:67
 msgid "Bootstrap4"
 msgstr "Bootstrap4"
 
-#: xadmin/plugins/themes.py:68
+#: xadmin/plugins/themes.py:67
 msgid "Bootstrap 4.x theme"
 msgstr "Tema Bootstrap 4.x"
 
 #: xadmin/plugins/topnav.py:61 xadmin/views/dashboard.py:477
-#: xadmin/views/edit.py:448 xadmin/views/edit.py:457
+#: xadmin/views/edit.py:460 xadmin/views/edit.py:469
 #, python-format
 msgid "Add %s"
 msgstr "Adicionar %s"
 
-#: xadmin/plugins/xversion.py:155
+#: xadmin/plugins/xversion.py:220
 msgid "Initial version."
 msgstr "Versão inicial."
 
-#: xadmin/plugins/xversion.py:157
+#: xadmin/plugins/xversion.py:222
 msgid "Change version."
 msgstr "Alterar versão."
 
-#: xadmin/plugins/xversion.py:159
+#: xadmin/plugins/xversion.py:224
 msgid "Revert version."
 msgstr "Reverter versão."
 
-#: xadmin/plugins/xversion.py:161
+#: xadmin/plugins/xversion.py:226
 msgid "Recover version."
 msgstr "Recuperar versão."
 
-#: xadmin/plugins/xversion.py:163
+#: xadmin/plugins/xversion.py:228
 #, python-format
 msgid "Deleted %(verbose_name)s."
 msgstr "Excluídos %(verbose_name)s."
 
-#: xadmin/plugins/xversion.py:276
+#: xadmin/plugins/xversion.py:341
 #: xadmin/templates/xadmin/views/recover_form.html:21
 #, python-format
 msgid "Recover deleted %(name)s"
 msgstr "Recuperar %(name)s removido"
 
-#: xadmin/plugins/xversion.py:319
+#: xadmin/plugins/xversion.py:384
 msgid "Not filled (empty)"
 msgstr "Não preenchido (vazio)"
 
-#: xadmin/plugins/xversion.py:362
+#: xadmin/plugins/xversion.py:427
 #, python-format
 msgid "Change history: %s"
 msgstr "Alterar histórico: %s"
 
-#: xadmin/plugins/xversion.py:534
+#: xadmin/plugins/xversion.py:627
 msgid "Must select two versions."
 msgstr "É necessário selecionar 2 versões"
 
-#: xadmin/plugins/xversion.py:541
+#: xadmin/plugins/xversion.py:634
 msgid "Please select two different versions."
 msgstr "Por favor selecione duas versões diferentes."
 
-#: xadmin/plugins/xversion.py:615 xadmin/plugins/xversion.py:736
+#: xadmin/plugins/xversion.py:708 xadmin/plugins/xversion.py:829
 #, python-format
 msgid "Current: %s"
 msgstr "Atual: %s"
 
-#: xadmin/plugins/xversion.py:659
+#: xadmin/plugins/xversion.py:752
 #, python-format
 msgid "Revert %s"
 msgstr "Revertido: %s"
 
-#: xadmin/plugins/xversion.py:675
+#: xadmin/plugins/xversion.py:768
 #, python-format
 msgid ""
 "The %(model)s \"%(name)s\" was reverted successfully. You may edit it again "
@@ -645,12 +682,12 @@ msgstr ""
 "%(model)s \"%(name)s\" foi revertido(a) com sucesso. Você pode editá-lo(a) "
 "novamente abaixo."
 
-#: xadmin/plugins/xversion.py:695
+#: xadmin/plugins/xversion.py:788
 #, python-format
 msgid "Recover %s"
 msgstr "Recuperar %s"
 
-#: xadmin/plugins/xversion.py:711
+#: xadmin/plugins/xversion.py:804
 #, python-format
 msgid ""
 "The %(model)s \"%(name)s\" was recovered successfully. You may edit it again "
@@ -683,7 +720,7 @@ msgstr "Pedimos desculpas, mas a página solicitada não foi encontrada."
 #: xadmin/templates/xadmin/views/recover_form.html:10
 #: xadmin/templates/xadmin/views/recover_list.html:9
 #: xadmin/templates/xadmin/views/revision_diff.html:9
-#: xadmin/templates/xadmin/views/revision_form.html:10 xadmin/views/base.py:614
+#: xadmin/templates/xadmin/views/revision_form.html:10 xadmin/views/base.py:623
 msgid "Home"
 msgstr "Início"
 
@@ -890,12 +927,12 @@ msgid "Save"
 msgstr "Gravar"
 
 #: xadmin/templates/xadmin/blocks/model_form.submit_line.wizard.html:48
-#: xadmin/templates/xadmin/includes/submit_line.html:29
+#: xadmin/templates/xadmin/includes/submit_line.html:33
 msgid "Save and add another"
 msgstr "Gravar e adicionar outro"
 
 #: xadmin/templates/xadmin/blocks/model_form.submit_line.wizard.html:49
-#: xadmin/templates/xadmin/includes/submit_line.html:30
+#: xadmin/templates/xadmin/includes/submit_line.html:34
 msgid "Save and continue editing"
 msgstr "Gravar e continuar editando"
 
@@ -1027,7 +1064,7 @@ msgstr "A cada %(t)s segundos"
 msgid "Save Order"
 msgstr "Gravar ordenação"
 
-#: xadmin/templates/xadmin/edit_inline/base.html:34
+#: xadmin/templates/xadmin/edit_inline/base.html:38
 #, python-format
 msgid ""
 "\n"
@@ -1040,7 +1077,7 @@ msgstr ""
 "            "
 
 #: xadmin/templates/xadmin/edit_inline/blank.html:5 xadmin/views/detail.py:23
-#: xadmin/views/edit.py:118 xadmin/views/list.py:32
+#: xadmin/views/edit.py:122 xadmin/views/list.py:32
 msgid "Null"
 msgstr "Nulo"
 
@@ -1203,7 +1240,7 @@ msgid "Skipped"
 msgstr "Pular"
 
 #: xadmin/templates/xadmin/import_export/import.html:109
-#: xadmin/templates/xadmin/includes/submit_line.html:35
+#: xadmin/templates/xadmin/includes/submit_line.html:39
 #: xadmin/templates/xadmin/views/model_detail.html:28 xadmin/views/delete.py:97
 msgid "Delete"
 msgstr "Excluir"
@@ -1219,7 +1256,15 @@ msgstr "Mostrar Tudo"
 msgid "Saving.."
 msgstr "Gravando.."
 
-#: xadmin/templates/xadmin/includes/submit_line.html:28
+#: xadmin/templates/xadmin/includes/submit_line.html:23
+#: xadmin/templates/xadmin/includes/submit_line.html:43
+#: xadmin/templates/xadmin/views/batch_change_form.html:45
+#: xadmin/templates/xadmin/views/model_delete_confirm.html:35
+#: xadmin/templates/xadmin/views/model_delete_selected_confirm.html:52
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: xadmin/templates/xadmin/includes/submit_line.html:32
 msgid "Save as new"
 msgstr "Gravar como novo"
 
@@ -1246,12 +1291,6 @@ msgstr[1] "Alterar campos para %(counter)s %(objects_name)s selecionados"
 #: xadmin/templates/xadmin/views/batch_change_form.html:44
 msgid "Change Multiple"
 msgstr "Alterar Múltiplos"
-
-#: xadmin/templates/xadmin/views/batch_change_form.html:45
-#: xadmin/templates/xadmin/views/model_delete_confirm.html:35
-#: xadmin/templates/xadmin/views/model_delete_selected_confirm.html:52
-msgid "Cancel"
-msgstr "Cancelar"
 
 #: xadmin/templates/xadmin/views/dashboard.html:19
 #: xadmin/templates/xadmin/views/dashboard.html:26
@@ -1522,11 +1561,11 @@ msgstr "Escolher arquivo"
 msgid "Now"
 msgstr "Agora"
 
-#: xadmin/views/base.py:436
+#: xadmin/views/base.py:445
 msgid "Django Xadmin"
 msgstr "Django Xadmin"
 
-#: xadmin/views/base.py:437
+#: xadmin/views/base.py:446
 msgid "my-company.inc"
 msgstr "my-company.inc"
 
@@ -1560,10 +1599,8 @@ msgid "Quick Buttons"
 msgstr "Botões Rápidos"
 
 #: xadmin/views/dashboard.py:379
-#, fuzzy
-#| msgid "Target Model"
 msgid "Target Url"
-msgstr "Modelo Alvo"
+msgstr "URL Alvo"
 
 #: xadmin/views/dashboard.py:425
 msgid "Any Objects list Widget."
@@ -1588,7 +1625,7 @@ msgid "The %(name)s \"%(obj)s\" was deleted successfully."
 msgstr "%(name)s \"%(obj)s\" excluído(a) com sucesso."
 
 #: xadmin/views/detail.py:198 xadmin/views/detail.py:204
-#: xadmin/views/edit.py:229 xadmin/views/edit.py:235 xadmin/views/form.py:64
+#: xadmin/views/edit.py:233 xadmin/views/edit.py:239 xadmin/views/form.py:64
 msgid "Other Fields"
 msgstr "Outros Campos"
 
@@ -1597,38 +1634,29 @@ msgstr "Outros Campos"
 msgid "%s Detail"
 msgstr "%s Detalhes"
 
-#: xadmin/views/edit.py:302
+#: xadmin/views/edit.py:306
 msgid "Added."
 msgstr "Adicionado."
 
-#: xadmin/views/edit.py:304
-#, python-format
-msgid "Changed %s."
-msgstr "Alterado %s"
-
-#: xadmin/views/edit.py:304
-msgid "and"
-msgstr "e"
-
-#: xadmin/views/edit.py:307
+#: xadmin/views/edit.py:311
 msgid "No fields changed."
 msgstr "Nenhum campo alterado."
 
-#: xadmin/views/edit.py:480
+#: xadmin/views/edit.py:492
 #, python-format
 msgid "The %(name)s \"%(obj)s\" was added successfully."
 msgstr "%(name)s \"%(obj)s\" adicionado(a) com sucesso."
 
-#: xadmin/views/edit.py:490 xadmin/views/edit.py:599
+#: xadmin/views/edit.py:502 xadmin/views/edit.py:611
 msgid "You may edit it again below."
 msgstr "Você pode editar novamente abaixo."
 
-#: xadmin/views/edit.py:496 xadmin/views/edit.py:605
+#: xadmin/views/edit.py:508 xadmin/views/edit.py:617
 #, python-format
 msgid "You may add another %s below."
 msgstr "Você pode adicionar outro(a) %s abaixo."
 
-#: xadmin/views/edit.py:593
+#: xadmin/views/edit.py:605
 #, python-format
 msgid "The %(name)s \"%(obj)s\" was changed successfully."
 msgstr "%(name)s \"%(obj)s\" alterado(a) com sucesso."
