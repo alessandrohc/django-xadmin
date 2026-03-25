@@ -51,6 +51,10 @@ def autodiscover():
 	register_builtin_plugins(site)
 
 	for app_config in apps.get_app_configs():
+		# skip deactivated plugin apps (models loaded, functionality disabled)
+		if getattr(app_config, 'deactivated', False):
+			continue
+
 		mod = import_module(app_config.name)
 		before_import_registry = site.copy_registry()
 		# Attempt to import the app's admin module.
