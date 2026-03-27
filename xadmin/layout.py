@@ -8,8 +8,10 @@ from crispy_forms.bootstrap import *
 from crispy_forms.layout import *
 from crispy_forms.utils import render_field, TEMPLATE_PACK
 
-# local reference to prevent optimization tools from removing the import
-FormHelper = helper.FormHelper
+# Backwards-compatible alias — all consumers (edit.py, form.py, inline.py)
+# import FormHelper from this module; the alias ensures they use
+# XadminFormHelper without changing any call site.
+from xadmin.helpers import XadminFormHelper as FormHelper
 bootstrap = bootstrap
 
 
