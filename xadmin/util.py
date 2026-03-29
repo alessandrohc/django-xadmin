@@ -1,10 +1,11 @@
 # coding=utf-8
 import datetime
 import decimal
+import logging
 from django.contrib.admin import utils as admin_utils
 from django.conf import settings
 from django.contrib.admin.widgets import url_params_from_lookup_dict
-from django.db import models, router
+from django.db import models, router, ProgrammingError
 from django.db.models.fields.related import ForeignObjectRel
 from django.db.models.sql.query import LOOKUP_SEP
 from django.forms.utils import flatatt
@@ -26,6 +27,36 @@ import json
 NestedObjects = admin_utils.NestedObjects
 label_for_field = admin_utils.label_for_field
 help_text_for_field = admin_utils.help_text_for_field
+
+_logger = logging.getLogger(__name__)
+
+
+class SafeNestedObjects(NestedObjects):
+    """NestedObjects resilient to missing database tables.
+
+    Deactivated plugins keep their models loaded (for FK resolution) but
+    their tables may have been removed.  The standard NestedObjects crashes
+    when Collector.collect evaluates a queryset against a missing table.
+
+    This subclass forces queryset evaluation inside related_objects() so
+    that ProgrammingError (table doesn't exist) is caught per-relation,
+    preserving all other relations that succeed.  Django caches evaluated
+    querysets, so there is no extra query.
+    """
+
+    def related_objects(self, related_model, related_fields, objs):
+        qs = super().related_objects(related_model, related_fields, objs)
+        try:
+            # force evaluation — result is cached by Django QuerySet
+            bool(qs)
+        except ProgrammingError:
+            _logger.warning(
+                "Skipped cascade relation to %s.%s: table does not exist.",
+                related_model._meta.app_label,
+                related_model._meta.model_name,
+            )
+            return related_model.objects.none()
+        return qs
 
 
 try:
@@ -196,7 +227,7 @@ def get_deleted_objects(objs, admin_view):
 	else:
 		using = router.db_for_write(obj._meta.model)
 	collect_related = getattr(admin_view, "collect_related_nested_objects", True)
-	collector = NestedObjects(using=using)
+	collector = SafeNestedObjects(using=using)
 	collector.collect(objs, collect_related=collect_related)
 	perms_needed = set()
 
