@@ -1,13 +1,13 @@
 {% if formset_summary_errors %}
     <div class="alert alert-block alert-danger">
-        {% if form_error_title %}<h4 class="alert-heading">{{ form_error_title }}</h4>{% endif %}
+        {% if form_error_title %}<h6 class="alert-heading">{{ form_error_title }}</h6>{% endif %}
         <ul class="m-0">
             {{ formset_summary_errors|unordered_list }}
         </ul>
     </div>
 {% elif formset.non_form_errors %}
     <div class="alert alert-block alert-danger">
-        {% if formset_error_title %}<h4 class="alert-heading">{{ formset_error_title }}</h4>{% endif %}
+        {% if formset_error_title %}<h6 class="alert-heading">{{ formset_error_title }}</h6>{% endif %}
         <ul class="m-0">
             {{ formset.non_form_errors|unordered_list }}
         </ul>
