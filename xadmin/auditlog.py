@@ -119,12 +119,13 @@ class AuditLog:
         - n <= BULK_LOG_THRESHOLD: one log per object, bulk_create + manual post_save dispatch
         - n >  BULK_LOG_THRESHOLD: single summary log with field names and PKs in message
         """
+        caller_message = kwargs.pop('message', None)
         objs, is_queryset, n = _resolve_objs(objs)
 
         if n <= BULK_LOG_THRESHOLD:
             logs = []
             for obj in objs:
-                log = cls.update(request, obj, fields=fields, auto_save=False, **kwargs)
+                log = cls.update(request, obj, fields=fields, auto_save=False, message=caller_message, **kwargs)
                 if log is not None:
                     logs.append(log)
             return _bulk_create_with_signals(logs)
@@ -155,6 +156,7 @@ class AuditLog:
         - n <= BULK_LOG_THRESHOLD: one log per object, bulk_create + manual post_save dispatch
         - n >  BULK_LOG_THRESHOLD: single summary log with PKs in message
         """
+        kwargs.pop('message', None)
         objs, is_queryset, n = _resolve_objs(objs)
 
         if n <= BULK_LOG_THRESHOLD:
