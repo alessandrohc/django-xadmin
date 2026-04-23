@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from django.template.response import SimpleTemplateResponse, TemplateResponse
 from django.urls.base import NoReverseMatch
 from django.utils.encoding import force_str, smart_str
-from django.utils.html import escape, conditional_escape
+from django.utils.html import escape, conditional_escape, format_html
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
@@ -74,6 +74,13 @@ class ResultItem:
 
 	@property
 	def label(self):
+		"""Render the cell text with every entry in self.wraps applied in order.
+
+		Each wrap is a template string consumed via `wrap % text`, so any code
+		populating self.wraps with dynamic data must first double literal '%'
+		characters to '%%'. Otherwise an unintended formatter (e.g. a '%d'
+		carried over from str(obj) or a URL) will raise TypeError at render time.
+		"""
 		text = mark_safe(
 			self.text) if self.allow_tags else conditional_escape(self.text)
 		if force_str(text) == '':
@@ -604,12 +611,21 @@ class ListAdminView(ModelAdminView):
 						edit_url = self.model_admin_url("change", getattr(obj, self.pk_attname))
 					else:
 						edit_url = ""
-					item.wraps.append(
-						'<a data-res-uri="%s" href="" data-edit-uri="%s" class="details-handler" rel="tooltip" title="%s">%%s</a>'
-						% (item_res_uri, edit_url, _('Details of %s') % str(obj)))
+					# HTML-escape the dynamic values, then double any '%' in the prefix so
+					# the trailing '%s' placeholder (consumed by ResultItem.label) is not
+					# corrupted by stray '%' chars coming from str(obj), URLs, etc.
+					title = _('Details of %s') % str(obj)
+					opening = format_html(
+						'<a data-res-uri="{}" href="" data-edit-uri="{}" '
+						'class="details-handler" rel="tooltip" title="{}">',
+						item_res_uri, edit_url, title,
+					)
+					item.wraps.append(opening.replace('%', '%%') + '%s</a>')
 			else:
 				if url := self.url_for_result(obj):
-					item.wraps.append('<a href="%s">%%s</a>' % url)
+					# Same '%' escaping as the details branch: avoids TypeError in label.
+					opening = format_html('<a href="{}">', url)
+					item.wraps.append(opening.replace('%', '%%') + '%s</a>')
 		return item
 
 	@filter_hook
