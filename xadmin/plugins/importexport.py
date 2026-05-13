@@ -54,7 +54,6 @@ from django.template.response import TemplateResponse
 from django.urls.base import reverse
 from django.utils.encoding import force_str
 from django.utils.translation import gettext_lazy as _
-from import_export.formats.base_formats import DEFAULT_FORMATS
 from import_export.forms import (ImportForm, ConfirmImportForm, ExportForm)
 from import_export.resources import modelresource_factory
 from import_export.results import RowResult
@@ -97,7 +96,13 @@ class ImportBaseView(ModelAdminView):
 	import_template_name = 'xadmin/import_export/import.html'
 	#: resource class
 	#: available import formats
-	formats = DEFAULT_FORMATS
+	@property
+	def formats(self):
+		# Lazy import: base_formats evaluates DEFAULT_FORMATS at load time,
+		# which triggers tablib._xlsx -> openpyxl (~31 MB RSS at boot). Deferring
+		# to the first real access avoids that cost during django.setup().
+		from import_export.formats.base_formats import DEFAULT_FORMATS
+		return DEFAULT_FORMATS
 	#: import data encoding
 	from_encoding = "utf-8"
 	skip_admin_log = None
@@ -325,7 +330,11 @@ class ExportMixin:
 	#: template for export view
 	# export_template_name = 'xadmin/import_export/export.html'
 	#: available export formats
-	formats = DEFAULT_FORMATS
+	@property
+	def formats(self):
+		# Lazy import — see comment on ImportBaseView.formats
+		from import_export.formats.base_formats import DEFAULT_FORMATS
+		return DEFAULT_FORMATS
 	#: export data encoding
 	to_encoding = "utf-8"
 	list_select_related = None
