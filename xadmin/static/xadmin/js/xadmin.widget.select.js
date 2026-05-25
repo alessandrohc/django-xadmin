@@ -30,6 +30,11 @@
               var $select = $el.selectize(options);
               $el.data('selectize', $select[0].selectize);
 
+              // Neutralize vendor's autocomplete="new-password" that triggers Chrome's password manager.
+              $select[0].selectize.$control_input
+                  .attr('autocomplete', 'off')
+                  .removeAttr('autofill');
+
               // bug fix: placeholder calculates the wrong width
               if (window.parent && window.parent.document) {
                 window.setTimeout(function () {
@@ -49,10 +54,10 @@
                     searchField: '__str__',
                     create: false,
                     maxItems: 1,
-                    preload: preload,
+                    // 'focus' loads once on first open (selectize.js:1817); true keeps eager mount-time load for .select-preload.
+                    preload: preload ? true : 'focus',
                     plugins: ["clear_button"],
                     load: function (query, callback) {
-                        if (!preload && !query.length) return callback();
                         $.ajax({
                             url: $el.data('search-url') + $el.data('choices'),
                             dataType: 'json',
@@ -92,6 +97,11 @@
             $el.trigger( "selectize_pre_init", [ options, placeholder ] );
             var $select = $el.selectize(options);
             $el.data('selectize', $select[0].selectize);
+
+            // Neutralize vendor's autocomplete="new-password" that triggers Chrome's password manager.
+            $select[0].selectize.$control_input
+                .attr('autocomplete', 'off')
+                .removeAttr('autofill');
 
             // bug fix: placeholder calculates the wrong width
             if (window.parent && window.parent.document) {
