@@ -419,3 +419,28 @@ class EdgeCaseTest(AuditLogTestBase):
         del request.META['REMOTE_ADDR']
         log = AuditLog.create(request, obj)
         self.assertIsNone(log.ip_addr)
+
+
+# ---------------------------------------------------------------------------
+# Log.__str__ — the LogAdmin "data history" column
+# ---------------------------------------------------------------------------
+class LogStrTest(TestCase):
+    """str(Log) must always show the change message when it is filled, not only
+    for update/change. Built in memory (no save) — __str__ touches no database."""
+
+    def test_create_with_message_shows_description(self):
+        text = str(Log(action_flag='create', object_repr='Foo', message='my description'))
+        self.assertIn('Foo', text)
+        self.assertIn('my description', text)
+
+    def test_create_without_message_has_no_dangling_separator(self):
+        text = str(Log(action_flag='create', object_repr='Foo', message=''))
+        self.assertNotIn(' - ', text)
+
+    def test_update_still_shows_message(self):
+        text = str(Log(action_flag='update', object_repr='Foo', message='changed name'))
+        self.assertIn('changed name', text)
+
+    def test_delete_with_message_appends_description(self):
+        text = str(Log(action_flag='delete', object_repr='Foo', message='reason'))
+        self.assertIn('reason', text)
