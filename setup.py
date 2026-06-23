@@ -11,7 +11,7 @@ def load_requirements(filename='requirements.txt'):
 
 setup(
 	name='xadmin',
-	version='3.6.21',
+	version='3.6.22',
 	description='Drop-in replacement of Django admin comes with lots of goodies, '
 	            'fully extensible with plugin support, pretty UI based on Twitter Bootstrap.',
 	long_description=open('README.rst', encoding='utf-8').read(),
