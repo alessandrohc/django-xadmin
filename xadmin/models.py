@@ -188,25 +188,31 @@ class Log(models.Model):
 		return smart_str(self.action_time)
 
 	def __str__(self):
-		if self.action_flag == 'create':
-			return gettext('Added "%(object)s".') % {'object': self.object_repr}
-		elif self.action_flag in ('update', 'change'):
+		# update/change already embeds the change message inline — keep it as is.
+		if self.action_flag in ('update', 'change'):
 			return gettext('Changed "%(object)s" - %(changes)s') % {
 				'object': self.object_repr,
 				'changes': self.message,
 			}
+		if self.action_flag == 'create':
+			text = gettext('Added "%(object)s".') % {'object': self.object_repr}
 		elif self.action_flag == 'delete':
-			if self.object_repr:
-				return gettext('Deleted "%(object)s."') % {'object': self.object_repr}
-			return gettext('Deleted object.')
+			text = gettext('Deleted "%(object)s."') % {'object': self.object_repr} \
+				if self.object_repr else gettext('Deleted object.')
 		elif self.action_flag == 'move' and self.object_repr:
-			return gettext('Moved "%(object)s."') % {'object': self.object_repr}
+			text = gettext('Moved "%(object)s."') % {'object': self.object_repr}
 		elif self.action_flag == 'copy' and self.object_repr:
-			return gettext('Copied "%(object)s."') % {'object': self.object_repr}
+			text = gettext('Copied "%(object)s."') % {'object': self.object_repr}
 		elif self.action_flag == 'duplicate' and self.object_repr:
-			return gettext('Duplicated "%(object)s."') % {'object': self.object_repr}
+			text = gettext('Duplicated "%(object)s."') % {'object': self.object_repr}
+		else:
+			return self.message
 
-		return self.message
+		# always append the change message (description) when present — the separator
+		# is a literal, not a translatable string.
+		if self.message:
+			text = '%s - %s' % (text, self.message)
+		return text
 
 	def get_edited_object(self):
 		"""Returns the edited object represented by this log entry"""
