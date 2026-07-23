@@ -163,7 +163,7 @@
       type: "POST",
       dataType: 'json',
       beforeSend: function(xhr, settings) {
-          xhr.setRequestHeader("X-CSRFToken", $.getCookie('csrftoken'))
+          xhr.setRequestHeader("X-CSRFToken", $.getCSRFToken())
       }
     })
   }

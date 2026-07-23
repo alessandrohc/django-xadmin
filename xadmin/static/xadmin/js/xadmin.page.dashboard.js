@@ -22,7 +22,7 @@ jQuery(function() {
         var form = $(this).find('form');
         form.exform();
         modal.find('.btn-submit').click(function(){
-          var csrftoken = $.getCookie('csrftoken');
+          var csrftoken = $.getCSRFToken();
           //clean form errors
           form.find('.invalid-feedback').remove();
           $.ajax({

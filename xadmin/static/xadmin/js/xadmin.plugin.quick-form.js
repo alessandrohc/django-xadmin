@@ -144,7 +144,7 @@
         contentType: false,
         processData: false,
         beforeSend: function(xhr, settings) {
-            xhr.setRequestHeader("X-CSRFToken", $.getCookie('csrftoken'));
+            xhr.setRequestHeader("X-CSRFToken", $.getCSRFToken());
         }
       })
     },
