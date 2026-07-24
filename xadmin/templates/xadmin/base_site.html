@@ -28,10 +28,14 @@
           </li>
         {% endif %}
         <li class="nav-item">
-          <a class="nav-link text-nowrap" href="{% url 'xadmin:logout' %}">
-            <i class="fa fa-sign-out-alt" title="{% trans 'Log out' %}"></i>
-            <span class="d-md-none d-lg-inline-block">{% trans 'Log out' %}</span>
-          </a>
+          {# #7008: logout must be a CSRF-protected POST (the view is POST-only now; a GET no longer logs out). #}
+          <form method="post" action="{% url 'xadmin:logout' %}" class="form-inline">
+            {% csrf_token %}
+            <button type="submit" class="nav-link text-nowrap btn btn-link p-0 border-0 align-baseline">
+              <i class="fa fa-sign-out-alt" title="{% trans 'Log out' %}"></i>
+              <span class="d-md-none d-lg-inline-block">{% trans 'Log out' %}</span>
+            </button>
+          </form>
         </li>
       </ul>
       {% view_block 'top_navbar' %}

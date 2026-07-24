@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _
 from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
 
 from xadmin.forms import AdminAuthenticationForm
 from xadmin.layout import FormHelper
@@ -128,12 +129,20 @@ class LogoutView(AuthBaseAdminView):
 	logout_template = None
 	need_site_permission = False
 
+	# #7008: logout only via CSRF-protected POST. Allowing GET enabled a
+	# "force-logout" DoS — an <img src=".../logout/"> embedded in CMS content
+	# logged out any admin who opened the page (a GET bypasses CsrfViewMiddleware).
+	# This mirrors the POST-only LogoutView that Django 5.0 made the default; a GET
+	# now returns 405. All logout links must be POST forms with {% csrf_token %}.
+	http_method_names = ["post", "options"]
+
 	@filter_hook
 	def update_params(self, defaults):
 		pass
 
 	@method_decorator(never_cache)
-	def get(self, request, *args, **kwargs):
+	@method_decorator(csrf_protect)
+	def post(self, request, *args, **kwargs):
 		context = self.get_context()
 		defaults = {
 			'extra_context': context,
@@ -146,7 +155,3 @@ class LogoutView(AuthBaseAdminView):
 		self.update_params(defaults)
 		# return logout(request, **defaults)
 		return logout.as_view(**defaults)(request)
-
-	@method_decorator(never_cache)
-	def post(self, request, *args, **kwargs):
-		return self.get(request)
