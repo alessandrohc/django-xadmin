@@ -28,7 +28,12 @@ class MergeAdminMetaclass(type):
 
 class AdminRoute:
 	"""Route to include other urls"""
-	path = re_path
+	# staticmethod is required: re_path/path are functools.partial objects and, from
+	# Python 3.14 on, partial is a method descriptor. Without staticmethod,
+	# self.path(route, view) would pass self as the first positional argument and
+	# Django's _path() would raise TypeError while building site.urls -- a boot
+	# failure. On 3.13 and older partial has no __get__, so wrapping is a no-op.
+	path = staticmethod(re_path)
 
 	def __init__(self, route, app_name=None, namespace=None):
 		self.route = route
@@ -45,7 +50,8 @@ class AdminRoute:
 class AdminUrl:
 	"""Similar to Django urls, stores the definitions of a view
 	"""
-	path = re_path
+	# See the note on AdminRoute.path.
+	path = staticmethod(re_path)
 
 	def __init__(self, route, cls_func, name=None, **kwargs):
 		self.route = route
@@ -82,7 +88,8 @@ class AdminUrl:
 
 class AdminPath(AdminUrl):
 	"""URL specification that does not use a pattern"""
-	path = dj_path
+	# See the note on AdminRoute.path.
+	path = staticmethod(dj_path)
 
 
 class BaseAdminOption:
@@ -393,11 +400,11 @@ class AdminSite:
 			class MyAdminSite(AdminSite):
 
 				def get_urls(self):
-					from django.conf.urls import url
+					from django.urls import re_path
 
 					urls = super(MyAdminSite, self).get_urls()
 					urls += [
-						url(r'^my_view/$', self.admin_view(some_view))
+						re_path(r'^my_view/$', self.admin_view(some_view))
 					]
 					return urls
 

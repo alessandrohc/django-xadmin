@@ -185,7 +185,7 @@ class ExportPlugin(BaseAdminPlugin):
 	def _format_csv_text(self, t):
 		if isinstance(t, bool):
 			return _('Yes') if t else _('No')
-		t = t.replace('"', '""').replace(',', '\,')
+		t = t.replace('"', '""').replace(',', r'\,')
 		if isinstance(t, str):
 			t = '"%s"' % t
 		return t

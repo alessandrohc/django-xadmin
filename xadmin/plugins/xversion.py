@@ -85,7 +85,9 @@ def _register_model(admin, model):
 							break
 				if fk_name:
 					_autoregister(admin, inline_model, follow=[fk_name])
-					if not inline_opts.get_field(fk_name).remote_field.is_hidden():
+					# .hidden rather than is_hidden(): the method was removed in Django 5.1 and
+					# the property exists on 4.2 as well, so no version predicate is needed.
+					if not inline_opts.get_field(fk_name).remote_field.hidden:
 						field = inline_opts.get_field(fk_name)
 						accessor = field.remote_field.get_accessor_name()
 						inline_fields.append(accessor)

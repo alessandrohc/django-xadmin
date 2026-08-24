@@ -39,7 +39,8 @@ class RelateMenuPlugin(BaseAdminPlugin):
 			                               for c in self.opts.concrete_model._meta.proxied_children
 			                               if c is not self.opts)
 			relations = (f.remote_field for f in children
-			             if include_hidden or not f.remote_field.field.remote_field.is_hidden())
+			             # See the note in plugins/xversion.py: is_hidden() went in Django 5.1.
+			             if include_hidden or not f.remote_field.field.remote_field.hidden)
 			fields = chain(fields, relations)
 		return list(fields)
 

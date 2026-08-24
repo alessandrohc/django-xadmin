@@ -267,7 +267,23 @@ class HtmlWidget(BaseWidget):
 		context['content'] = self.cleaned_data['content']
 
 
-class ModelChoiceIterator:
+try:
+	# Django >= 5.0. normalize_choices() passes BaseChoiceIterator instances through
+	# untouched ("avoid prematurely normalizing iterators that should be lazy"), which
+	# is exactly what this iterator needs: ModelBaseWidget builds its ModelChoiceField
+	# in a class body, so the widget is assigned its choices while
+	# xadmin.views.dashboard is being imported -- at the top of autodiscover(), before
+	# any adminx module has registered anything. Without this base class Django 5.0+
+	# materialises the iterator into a list right there and the Target Model dropdown
+	# is frozen to the near-empty registry of that moment.
+	from django.utils.choices import BaseChoiceIterator as _ChoiceIteratorBase
+except ImportError:
+	# Django 4.2 has no such class, and none is needed: ChoiceWidget.choices is a
+	# plain instance attribute there, so the iterator is stored as-is.
+	_ChoiceIteratorBase = object
+
+
+class ModelChoiceIterator(_ChoiceIteratorBase):
 
 	def __init__(self, field):
 		self.field = field
@@ -295,7 +311,11 @@ class ModelChoiceField(forms.ChoiceField):
 	def _get_choices(self):
 		return ModelChoiceIterator(self)
 
-	choices = property(_get_choices, forms.ChoiceField._set_choices)
+	# The setter comes from Django's own property rather than from the private
+	# _get_choices/_set_choices pair, which Django 5.0 removed when it turned
+	# ChoiceField.choices into a real property. `choices.fset` exists on both 4.2
+	# and 5.2, so this reads correctly on either without a version predicate.
+	choices = property(_get_choices, forms.ChoiceField.choices.fset)
 
 	def to_python(self, value):
 		if isinstance(value, ModelBase):

@@ -1,6 +1,5 @@
-default_app_config = 'xadmin.apps.XAdminConfig'
-
-VERSION = (0, 6, 0)
+# Kept in step with setup.py's version by hand; test_packaging pins that they agree.
+VERSION = (3, 7, 0)
 
 from xadmin.sites import AdminSite, site
 

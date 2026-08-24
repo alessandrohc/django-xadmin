@@ -1,0 +1,24 @@
+# coding=utf-8
+"""Two models with a plain FK, so an inline admin has a reverse relation to walk."""
+from django.db import models
+
+
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
+
+
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
+    title = models.CharField(max_length=100)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.title

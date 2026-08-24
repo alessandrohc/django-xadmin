@@ -18,7 +18,7 @@ from django.core.exceptions import FieldDoesNotExist
 from xadmin.filters import SEARCH_VAR
 from xadmin.layout import Layout
 from xadmin.sites import site
-from xadmin.util import get_model_from_relation, vendor
+from xadmin.util import get_model_from_relation, is_ajax, vendor
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView
 
 QUICKFORM_0_VAR = "_qfrm0"
@@ -69,7 +69,7 @@ class QuickFormPlugin(BaseAdminPlugin):
 		return bool(self.request.method == 'GET' and
 		            self.request_params.get(SEARCH_VAR) is None and
 		            self.request_params.get(QUICKFORM_0_VAR) is None and
-		            self.request.is_ajax() or
+		            is_ajax(self.request) or
 		            self.request_params.get('_ajax'))
 
 	def setup(self, *args, **kwargs):
@@ -130,7 +130,7 @@ class QuickFormFormSetPlugin(BaseAdminPlugin):
 	def init_request(self, *args, **kwargs):
 		return bool(isinstance(self.admin_view, ModelFormAdminView) and
 		            self.request.GET.get(QUICKFORM_0_VAR) is None and
-		            self.request.is_ajax() or
+		            is_ajax(self.request) or
 		            self.request.GET.get('_ajax'))
 
 	def get_formset(self, formset, **kwargs):

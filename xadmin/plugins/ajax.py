@@ -6,6 +6,7 @@ from django.utils.encoding import force_str
 from django.utils.html import escape
 
 from xadmin.sites import site
+from xadmin.util import is_ajax
 from xadmin.views import BaseAdminPlugin, ListAdminView, ModelFormAdminView, DetailAdminView
 
 NON_FIELD_ERRORS = '__all__'
@@ -14,7 +15,7 @@ NON_FIELD_ERRORS = '__all__'
 class BaseAjaxPlugin(BaseAdminPlugin):
 
 	def init_request(self, *args, **kwargs):
-		return bool(self.request.is_ajax() or self.request.GET.get('_ajax'))
+		return bool(is_ajax(self.request) or self.request.GET.get('_ajax'))
 
 
 class AjaxListPlugin(BaseAjaxPlugin):

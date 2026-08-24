@@ -1,5 +1,7 @@
 from django.utils.functional import cached_property
 
+from xadmin.util import is_ajax
+
 
 class ListQuery:
 	session_key = 'LIST_QUERY'
@@ -9,7 +11,7 @@ class ListQuery:
 
 	@cached_property
 	def _session_key(self) -> str:
-		return self.session_key if not self.request.is_ajax() else self.session_key + '_XHR'
+		return self.session_key if not is_ajax(self.request) else self.session_key + '_XHR'
 
 	def set(self, value):
 		self.request.session[self._session_key] = value
