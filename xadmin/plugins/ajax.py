@@ -21,11 +21,35 @@ class BaseAjaxPlugin(BaseAdminPlugin):
 class AjaxListPlugin(BaseAjaxPlugin):
 
 	def get_list_display(self, list_display):
-		list_fields = [field for field in self.request.GET.get('_fields', "").split(",")
-		               if field.strip() != ""]
-		if list_fields:
-			return list_fields
-		return list_display
+		"""Narrow the served columns to a subset of what the admin declares.
+
+		This is a filter_hook, so whatever it returns REPLACES the view's list_display
+		and the result cells are built from it. Returning the caller's ?_fields= list
+		verbatim therefore let any request name any column of the model: measured on the
+		host project, `?_format=json&_ajax=1&_fields=password` served every user's
+		password hash, and `is_superuser`, to anyone holding nothing but `view`
+		permission -- ListAdminView only checks has_view_permission(). See #7369.
+
+		An unknown name was the second half of the same defect: it reached
+		`getattr(self.model, field_name)` in views/list.py and raised AttributeError, so
+		the parameter was also a one-GET denial of service.
+
+		Intersecting fixes both. It costs no functionality: nothing in this package or
+		in the host project builds a ?_fields= query -- the only reference anywhere is
+		this read -- and a caller legitimately asking for fewer of the declared columns
+		still gets exactly those.
+		"""
+		requested = [field.strip() for field in self.request.GET.get('_fields', "").split(",")
+		             if field.strip() != ""]
+		if not requested:
+			return list_display
+
+		declared = set(list_display)
+		selected = [field for field in requested if field in declared]
+		# An empty intersection means the caller asked only for things the admin does not
+		# expose. Fall back to the declared columns rather than serving an empty
+		# changelist, which would look like "no data" instead of "no such column".
+		return selected or list_display
 
 	def get_result_list(self, response):
 		av = self.admin_view

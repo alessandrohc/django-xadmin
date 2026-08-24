@@ -5,6 +5,10 @@ from django.db import models
 
 class Author(models.Model):
     name = models.CharField(max_length=100)
+    # Deliberately NOT in AuthorAdmin.list_display: this is the stand-in for
+    # User.password in the #7369 leak. If it ever reaches a response, the
+    # ?_fields= filter is not doing its job.
+    secret = models.CharField(max_length=100, default='top-secret-value')
 
     class Meta:
         app_label = 'xadmin_fixture'
