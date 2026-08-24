@@ -17,7 +17,7 @@ from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import smart_str
 from django.utils.html import escape
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.debug import sensitive_post_parameters
 
 from xadmin.layout import Fieldset, Main, Side, Row, FormHelper
@@ -28,11 +28,11 @@ from xadmin.views import BaseAdminPlugin, ModelFormAdminView, ModelAdminView, Co
 User = get_user_model()
 
 ACTION_NAME = {
-	'add': _('Can add %s'),
-	'change': _('Can change %s'),
-	'edit': _('Can edit %s'),
-	'delete': _('Can delete %s'),
-	'view': _('Can view %s'),
+	'add': _lazy('Can add %s'),
+	'change': _lazy('Can change %s'),
+	'edit': _lazy('Can edit %s'),
+	'delete': _lazy('Can delete %s'),
+	'view': _lazy('Can view %s'),
 }
 
 
@@ -119,7 +119,7 @@ class PermissionAdmin:
 	def show_name(self, p):
 		return get_permission_name(p)
 
-	show_name.short_description = _('Permission Name')
+	show_name.short_description = _lazy('Permission Name')
 	show_name.is_column = True
 
 	model_icon = 'fa fa-lock'

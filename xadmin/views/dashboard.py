@@ -17,7 +17,7 @@ from django.utils.encoding import force_str, smart_str
 from django.utils.html import escape
 from urllib.parse import urlencode
 from django.utils.safestring import mark_safe
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.cache import never_cache
 
 from xadmin import widgets as exwidgets
@@ -77,6 +77,13 @@ class UserWidgetAdmin:
 	user_fields = ['user']
 	hidden_menu = True
 
+	# i18n-eager: NÃO trocar estes dois por _lazy. Eles são as CHAVES dos passos do wizard, não
+	# rótulos: plugins/wizard.py monta `init_form_list[smart_str(form[0])] = form[1]`,
+	# e smart_str NÃO converte um proxy (`if isinstance(s, Promise): return s`). A chave
+	# vai para request.session e é serializada com json.dumps puro, o que dá
+	# `TypeError: Object of type __proxy__ is not JSON serializable` já no primeiro GET
+	# de "Add Widget". Separar chave estável de rótulo traduzível exige mexer no
+	# wizard.py e está fora do escopo do #7368.
 	wizard_form_list = (
 		(_("Widget Type"), ('page_id', 'widget_type')),
 		(_("Widget Params"), {'callback': "get_widget_params_form", 'convert': "convert_widget_params"})
@@ -186,8 +193,8 @@ class BaseWidget(forms.Form):
 	widget_type = 'base'
 	base_title = None
 
-	id = forms.IntegerField(label=_('Widget ID'), widget=forms.HiddenInput)
-	title = forms.CharField(label=_('Widget Title'), required=False, widget=exwidgets.AdminTextInputWidget)
+	id = forms.IntegerField(label=_lazy('Widget ID'), widget=forms.HiddenInput)
+	title = forms.CharField(label=_lazy('Widget Title'), required=False, widget=exwidgets.AdminTextInputWidget)
 
 	def __init__(self, dashboard, data):
 		self.dashboard = dashboard
@@ -252,9 +259,9 @@ class BaseWidget(forms.Form):
 class HtmlWidget(BaseWidget):
 	widget_type = 'html'
 	widget_icon = 'fa fa-file-alt'
-	description = _('Html Content Widget, can write any html content in widget.')
+	description = _lazy('Html Content Widget, can write any html content in widget.')
 
-	content = forms.CharField(label=_('Html Content'),
+	content = forms.CharField(label=_lazy('Html Content'),
 	                          widget=exwidgets.AdminTextareaWidget,
 	                          required=False)
 
@@ -338,7 +345,7 @@ class ModelBaseWidget(BaseWidget):
 	app_label = None
 	model_name = None
 	model_perm = 'change'
-	model = ModelChoiceField(label=_('Target Model'), widget=exwidgets.AdminSelectWidget)
+	model = ModelChoiceField(label=_lazy('Target Model'), widget=exwidgets.AdminSelectWidget)
 
 	def __init__(self, dashboard, data):
 		self.dashboard = dashboard
@@ -392,12 +399,12 @@ class PartialBaseWidget(BaseWidget):
 @widget_manager.register
 class QuickBtnWidget(BaseWidget):
 	widget_type = 'qbutton'
-	description = _('Quick button Widget, quickly open any page.')
+	description = _lazy('Quick button Widget, quickly open any page.')
 	template = "xadmin/widgets/qbutton.html"
-	base_title = _("Quick Buttons")
+	base_title = _lazy("Quick Buttons")
 	widget_icon = 'fa fa-caret-square-right'
 
-	url = forms.CharField(label=_("Target Url"), required=True)
+	url = forms.CharField(label=_lazy("Target Url"), required=True)
 
 	def convert(self, data):
 		self.q_btns = data.pop('btns', [
@@ -443,7 +450,7 @@ class QuickBtnWidget(BaseWidget):
 @widget_manager.register
 class ListWidget(ModelBaseWidget, PartialBaseWidget):
 	widget_type = 'list'
-	description = _('Any Objects list Widget.')
+	description = _lazy('Any Objects list Widget.')
 	template = "xadmin/widgets/list.html"
 	model_perm = 'view'
 	widget_icon = 'fa fa-align-justify'
@@ -486,7 +493,7 @@ class ListWidget(ModelBaseWidget, PartialBaseWidget):
 @widget_manager.register
 class AddFormWidget(ModelBaseWidget, PartialBaseWidget):
 	widget_type = 'addform'
-	description = _('Add any model object Widget.')
+	description = _lazy('Add any model object Widget.')
 	template = "xadmin/widgets/addform.html"
 	model_perm = 'add'
 	widget_icon = 'fa fa-plus'
@@ -522,7 +529,7 @@ class AddFormWidget(ModelBaseWidget, PartialBaseWidget):
 class Dashboard(CommAdminView):
 	widget_customiz = True
 	widgets = []
-	title = _("Dashboard")
+	title = _lazy("Dashboard")
 	icon = None
 
 	def get_page_id(self):
@@ -673,7 +680,7 @@ class Dashboard(CommAdminView):
 
 
 class ModelDashboard(Dashboard, ModelAdminView):
-	title = _("%s Dashboard")
+	title = _lazy("%s Dashboard")
 
 	def get_page_id(self):
 		return 'model:%s/%s' % self.model_info

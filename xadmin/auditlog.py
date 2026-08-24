@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_save
 from django.utils.encoding import force_str
 from django.utils.text import Truncator, get_text_list
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from xadmin.models import Log
 
@@ -70,8 +70,8 @@ class AuditLog:
     - n >  threshold: single summary log with PKs in the message field
     """
 
-    _changed_str = _('Changed %s.')
-    _and_str = _('and')
+    _changed_str = _lazy('Changed %s.')
+    _and_str = _lazy('and')
 
     @staticmethod
     @log_exception

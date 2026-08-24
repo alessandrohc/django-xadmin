@@ -3,7 +3,7 @@ from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.views import PasswordResetConfirmView as password_reset_confirm
 from django.template.response import TemplateResponse
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from xadmin.sites import site, AdminPath
 from xadmin.views.base import BaseAdminPlugin, BaseAdminView, csrf_protect_m
@@ -21,10 +21,10 @@ class ResetPasswordBaseAdminView(BaseAdminView):
 
 class ResetPasswordSendView(ResetPasswordBaseAdminView):
 	# title for form.html
-	title = _("Password reset")
+	title = _lazy("Password reset")
 
 	# title for done.html
-	title_done = _("Password reset by email")
+	title_done = _lazy("Password reset by email")
 
 	need_site_permission = False
 
@@ -83,7 +83,7 @@ site.register_plugin(ResetLinkPlugin, LoginView)
 
 
 class ResetPasswordConfirmView(ResetPasswordBaseAdminView):
-	title = _("Enter new password")
+	title = _lazy("Enter new password")
 	need_site_permission = False
 
 	password_reset_set_form = SetPasswordForm
@@ -126,7 +126,7 @@ site.register_view(
 
 
 class ResetPasswordCompleteView(ResetPasswordBaseAdminView):
-	title = _('Password reset successful')
+	title = _lazy('Password reset successful')
 
 	need_site_permission = False
 

@@ -24,7 +24,7 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
 from django.utils.text import capfirst
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from django.utils.functional import cached_property
 from reversion import RegistrationError
@@ -394,7 +394,7 @@ class RevisionDetailAdminUtil(DetailAdminUtil):
 
 class RevisionDetailResultsPlugin(BaseAdminPlugin):
 	"""Plugin to change the formatting of the details view results"""
-	revision_detail_empty_value = _('Not filled (empty)')
+	revision_detail_empty_value = _lazy('Not filled (empty)')
 	revision_detail_result_field = ResultField
 
 	def init_request(self, *args, **kwargs):

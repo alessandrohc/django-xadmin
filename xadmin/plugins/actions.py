@@ -8,7 +8,7 @@ from django.template.response import TemplateResponse
 from django.utils.encoding import force_str
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst
-from django.utils.translation import gettext as _, ngettext
+from django.utils.translation import gettext as _, gettext_lazy as _lazy, ngettext
 
 from xadmin.plugins.utils import get_context_dict
 from xadmin.sites import site
@@ -59,7 +59,7 @@ class BaseActionView(ModelAdminView):
 
 class DeleteSelectedAction(BaseActionView):
 	action_name = "delete_selected"
-	description = _('Delete selected %(verbose_name_plural)s')
+	description = _lazy('Delete selected %(verbose_name_plural)s')
 
 	delete_confirmation_template = None
 	delete_selected_confirmation_template = None
