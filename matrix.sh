@@ -24,6 +24,10 @@ VENVS=/tmp/x7093
 # Derived from requirements.txt, never hardcoded: a literal list drifts away from what
 # the package actually declares, silently, and the matrix would stop measuring the truth.
 DEPS=$(grep -viE '^[[:space:]]*(#|django[><=~!])' "$FORK/requirements.txt" | tr '\n' ' ')
+# Os extras de planilha nao estao no requirements.txt (sao extras_require['Excel']),
+# mas a suite de export precisa deles para exercitar xlsx/xls de verdade -- sem isso
+# os testes pulam e a celula da PASSED sem ter medido o que importa. xlrd e so leitura.
+DEPS="$DEPS xlsxwriter xlwt xlrd"
 
 build_cell() {   # $1 = interpreter, $2 = venv dir, $3 = django spec
 	# virtualenv rather than `python -m venv`: the 3.14 in this image has no

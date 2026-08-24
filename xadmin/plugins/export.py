@@ -9,7 +9,7 @@ import threading
 
 from django.conf import settings
 from django.contrib import messages
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import BooleanField, NullBooleanField
 from django.http import HttpResponse, HttpResponseRedirect
@@ -25,11 +25,10 @@ from xadmin.util import json
 from xadmin.views import BaseAdminPlugin, ListAdminView
 from xadmin.views.list import ALL_VAR
 
-# Probed, not imported. These three are only needed inside the export methods, but
+# Probed, not imported. These are only needed inside the export methods, but
 # importing them here to set the feature flags cost 12.0 MB and 98 modules in EVERY
 # process -- Celery workers included -- for a feature most of them never touch.
 # find_spec answers the same question at 0 MB and 0 modules (#7368).
-has_unicodecsv = importlib.util.find_spec('unicodecsv') is not None
 has_xlwt = importlib.util.find_spec('xlwt') is not None
 has_xlsxwriter = importlib.util.find_spec('xlsxwriter') is not None
 
@@ -37,8 +36,13 @@ has_xlsxwriter = importlib.util.find_spec('xlsxwriter') is not None
 class ExportMenuPlugin(BaseAdminPlugin):
 	export_menu_block_template = 'xadmin/blocks/model_list.top_toolbar.exports.html'
 
-	list_export = ('xlsx', 'xls', 'csv', 'xml', 'json')
-	export_names = {'xlsx': 'Excel 2007', 'xls': 'Excel', 'csv': 'CSV',
+	# No csv: a CSV carries no cell type, so a spreadsheet re-guesses every value on
+	# open and a cell starting with = + - @ becomes a formula. It cannot be made safe
+	# without disfiguring the data -- the usual apostrophe prefix would have hit the "-"
+	# empty-cell placeholder on thousands of cells. The binary formats carry the type and
+	# are safe by construction; xml and json are not evaluated at all. See #7369.
+	list_export = ('xlsx', 'xls', 'xml', 'json')
+	export_names = {'xlsx': 'Excel 2007', 'xls': 'Excel',
 	                'xml': 'XML', 'json': 'JSON'}
 	export_to_email = True
 
@@ -61,10 +65,9 @@ class ExportMenuPlugin(BaseAdminPlugin):
 
 class ExportPlugin(BaseAdminPlugin):
 	export_mimes = {'xlsx': 'application/vnd.ms-excel',
-	                'xls': 'application/vnd.ms-excel', 'csv': 'text/csv',
+	                'xls': 'application/vnd.ms-excel',
 	                'xml': 'application/xhtml+xml', 'json': 'application/json'}
 
-	export_unicode_csv = False
 	export_unicode_encoding = "utf-8"
 	export_email_config = {}
 
@@ -109,7 +112,11 @@ class ExportPlugin(BaseAdminPlugin):
 		# Imported at the point of use: see the find_spec note at the top of the module.
 		import xlsxwriter
 
-		book = xlsxwriter.Workbook(output)
+		# strings_to_formulas=False: xlsxwriter promotes a string starting with "=" to
+		# write_formula(), so the workbook carried a real <f> element that Excel evaluates
+		# on open -- no CSV import dialog in between. This stores it as text instead. The
+		# exported value does not change. See #7369.
+		book = xlsxwriter.Workbook(output, {'strings_to_formulas': False})
 		sheet = book.add_worksheet(
 			"%s %s" % (_('Sheet'), force_str(model_name)))
 		styles = {'datetime': book.add_format({'num_format': 'yyyy-mm-dd hh:mm:ss'}),
@@ -178,57 +185,6 @@ class ExportPlugin(BaseAdminPlugin):
 		output.seek(0)
 		return output.getvalue()
 
-	def _format_csv_text(self, t):
-		if isinstance(t, bool):
-			return _('Yes') if t else _('No')
-		t = t.replace('"', '""').replace(',', r'\,')
-		if isinstance(t, str):
-			t = '"%s"' % t
-		return t
-
-	def get_csv_export(self, context):
-		if self.export_unicode_csv:
-			return self.get_unicode_csv_export(context)
-
-		datas = self._get_datas(context)
-		stream = []
-
-		if self._options_is_on('export_csv_header'):
-			datas = datas[1:]
-
-		for row in datas:
-			stream.append(','.join(map(self._format_csv_text, row)))
-
-		return '\r\n'.join(stream)
-
-	def get_unicode_csv_export(self, context):
-		"""Exports the data in the configured encoding. Default utf8"""
-		if not has_unicodecsv:
-			raise ImproperlyConfigured("Need to install module \"unicodecsv\" "
-			                           "in order to export csv as unicode.")
-		datas = self._get_datas(context)
-		stream = io.BytesIO()
-		import unicodecsv
-
-		writer = unicodecsv.writer(stream, encoding=self.export_unicode_encoding)
-		writer.writerows(datas)
-		return stream.getvalue()
-
-	def _to_xml(self, xml, data):
-		if isinstance(data, (list, tuple)):
-			for item in data:
-				xml.startElement("row", {})
-				self._to_xml(xml, item)
-				xml.endElement("row")
-		elif isinstance(data, dict):
-			for key, value in data.items():
-				key = key.replace(' ', '_')
-				xml.startElement(key, {})
-				self._to_xml(xml, value)
-				xml.endElement(key)
-		else:
-			xml.characters(smart_str(data))
-
 	def get_xml_export(self, context):
 		results = self._get_objects(context)
 
@@ -287,7 +243,16 @@ class ExportPlugin(BaseAdminPlugin):
 		th.start()
 
 	def _get_file_spec(self, data, context):
-		file_type = data.get('export_type', 'csv')
+		file_type = data.get('export_type', 'xlsx')
+		# Validate before getattr: export_type comes straight from the query string, so
+		# an unknown value used to reach getattr() and raise AttributeError -- an
+		# unhandled 500 for any arbitrary ?export_type=. Same shape as the ?_fields=
+		# defect in plugins/ajax.py. Checking against export_mimes also means a format
+		# removed from the plugin (csv, #7369) stops being servable by a hand-built URL,
+		# which matters because list_export only gates the MENU, not the endpoint.
+		if file_type not in self.export_mimes:
+			raise SuspiciousOperation(
+				"Unsupported export format: %r" % file_type)
 		content = getattr(self, 'get_%s_export' % file_type)(context)
 		filename = "{0:s}.{1:s}".format(self.opts.verbose_name.replace(' ', '_'),
 		                                file_type)
