@@ -30,3 +30,18 @@ class Book(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class DummyModel(models.Model):
+    """Plain model for the auditlog suite, ported from tests/xtests/auditlog.
+
+    AuditLog logs against whatever object it is handed; this exists so those tests
+    have something to log without dragging the admin registration of Author into it.
+    """
+    name = models.CharField(max_length=64)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
