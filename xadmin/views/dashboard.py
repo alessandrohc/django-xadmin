@@ -11,12 +11,10 @@ from django.http import Http404
 from django.template import loader
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
-from django.test.client import RequestFactory
 from django.urls.base import reverse, NoReverseMatch
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str, smart_str
 from django.utils.html import escape
-from django.utils.http import urlencode
 from urllib.parse import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
@@ -372,6 +370,9 @@ class PartialBaseWidget(BaseWidget):
 		return self.admin_site.get_view_class(view_class, admin_class, **opts)
 
 	def get_factory(self):
+		# Imported here, not at module scope: django.test drags jinja2, unittest,
+		# wsgiref and http.server into the boot of every production process.
+		from django.test.client import RequestFactory
 		return RequestFactory()
 
 	def setup_request(self, request):

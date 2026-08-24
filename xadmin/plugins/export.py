@@ -1,6 +1,7 @@
 # coding=utf-8
 import copy
 import datetime
+import importlib.util
 import sys
 
 import io
@@ -24,24 +25,13 @@ from xadmin.util import json
 from xadmin.views import BaseAdminPlugin, ListAdminView
 from xadmin.views.list import ALL_VAR
 
-try:
-	import unicodecsv
-except ImportError:
-	unicodecsv = None
-
-try:
-	import xlwt
-
-	has_xlwt = True
-except:
-	has_xlwt = False
-
-try:
-	import xlsxwriter
-
-	has_xlsxwriter = True
-except:
-	has_xlsxwriter = False
+# Probed, not imported. These three are only needed inside the export methods, but
+# importing them here to set the feature flags cost 12.0 MB and 98 modules in EVERY
+# process -- Celery workers included -- for a feature most of them never touch.
+# find_spec answers the same question at 0 MB and 0 modules (#7368).
+has_unicodecsv = importlib.util.find_spec('unicodecsv') is not None
+has_xlwt = importlib.util.find_spec('xlwt') is not None
+has_xlsxwriter = importlib.util.find_spec('xlsxwriter') is not None
 
 
 class ExportMenuPlugin(BaseAdminPlugin):
@@ -116,6 +106,9 @@ class ExportPlugin(BaseAdminPlugin):
 		output = io.BytesIO()
 		export_header = self._options_is_on('export_xlsx_header')
 		model_name = self.opts.verbose_name
+		# Imported at the point of use: see the find_spec note at the top of the module.
+		import xlsxwriter
+
 		book = xlsxwriter.Workbook(output)
 		sheet = book.add_worksheet(
 			"%s %s" % (_('Sheet'), force_str(model_name)))
@@ -152,6 +145,9 @@ class ExportPlugin(BaseAdminPlugin):
 		output = io.BytesIO()
 		export_header = self._options_is_on('export_xls_header')
 		model_name = self.opts.verbose_name
+		# Imported at the point of use: see the find_spec note at the top of the module.
+		import xlwt
+
 		book = xlwt.Workbook(encoding=self.export_unicode_encoding)
 		sheet = book.add_sheet("%s %s" % (_('Sheet'), force_str(model_name)))
 		styles = {'datetime': xlwt.easyxf(num_format_str='yyyy-mm-dd hh:mm:ss'),
@@ -207,11 +203,13 @@ class ExportPlugin(BaseAdminPlugin):
 
 	def get_unicode_csv_export(self, context):
 		"""Exports the data in the configured encoding. Default utf8"""
-		if unicodecsv is None:
+		if not has_unicodecsv:
 			raise ImproperlyConfigured("Need to install module \"unicodecsv\" "
 			                           "in order to export csv as unicode.")
 		datas = self._get_datas(context)
 		stream = io.BytesIO()
+		import unicodecsv
+
 		writer = unicodecsv.writer(stream, encoding=self.export_unicode_encoding)
 		writer.writerows(datas)
 		return stream.getvalue()

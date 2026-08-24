@@ -1,7 +1,7 @@
 # coding=utf-8
 import functools
 import inspect
-from functools import update_wrapper, lru_cache
+from functools import update_wrapper
 from django.template.engine import Engine
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -482,9 +482,16 @@ class AdminSite:
 
 		return merge_class
 
-	@lru_cache(maxsize=None)
 	def get_plugins(self, admin_view_class, *option_classes):
-		"""Extracts the registered plugins in the view hierarchy"""
+		"""Extracts the registered plugins in the view hierarchy.
+
+		Deliberately NOT cached. It used to carry @lru_cache(maxsize=None), and measured
+		`hits=0, misses=5496` after a full URLconf load on the host project: it cannot
+		hit, because get_view_class short-circuits on _admin_view_cache before ever
+		reaching here, and that cache is keyed just as finely. So it was an unbounded
+		retainer holding 5,496 entries -- plus `self`, keeping the whole site alive --
+		and nothing else (#7368).
+		"""
 		from xadmin.views import BaseAdminView
 		plugins = []
 		# option classes affect all plugins but the impact of this is mitigated by name caching
@@ -543,8 +550,37 @@ class AdminSite:
 		return view_class.as_view(*(initargs or ()), **(initkwargs or {}))
 
 	def create_model_admin_view(self, admin_view_class, model, option_class, initargs=None, initkwargs=None):
-		view_class = self.get_view_class(admin_view_class, option_class)
-		return view_class.as_view(*(initargs or ()), **(initkwargs or {}))
+		"""A view that merges its admin class on first use, not at URLconf load.
+
+		get_urls() calls this once per (model, modelview). Building the merged class
+		eagerly meant a web worker paid for all of them before serving anything:
+		measured on the host project, 5,496 classes, 2.07 s and 100 MB of RSS -- for
+		views it had used none of. Deferring the merge to the first request that
+		actually reaches each URL took the same boot to 0.12 s and 12 MB, with 57
+		classes built instead of 5,496 (#7368).
+
+		The URL patterns are unaffected: the callable is what changes, not the route,
+		so reverse() and the urlconf shape stay identical. get_view_class() keeps its
+		own cache, so a merge still happens at most once per (view, admin) pair; the
+		holder below just avoids re-running as_view() on every request.
+		"""
+		holder = {}
+
+		def view(request, *args, **kwargs):
+			if 'view' not in holder:
+				view_class = self.get_view_class(admin_view_class, option_class)
+				holder['view'] = view_class.as_view(*(initargs or ()), **(initkwargs or {}))
+			return holder['view'](request, *args, **kwargs)
+
+		# wrap_view() runs update_wrapper() over this, and Django reads these for the
+		# urlconf, so carry the identity of the view being deferred rather than the
+		# closure's.
+		view.__name__ = admin_view_class.__name__
+		view.__module__ = admin_view_class.__module__
+		view.__doc__ = admin_view_class.__doc__
+		view.admin_view_class = admin_view_class
+		view.admin_option_class = option_class
+		return view
 
 	def wrap_view(self, view, cacheable=False):
 		"""View that passes through admin permissions"""
