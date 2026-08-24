@@ -156,6 +156,44 @@ class RemovedInDjango40Tests(SimpleTestCase):
         self.assertEqual(offenders, [])
 
 
+class DeprecatedInDjango60Tests(SimpleTestCase):
+    """Deprecated on 5.x, removed on 6.0. Cheap to keep out now."""
+
+    def test_nothing_depends_on_the_legacy_null_boolean_field(self):
+        """models.NullBooleanField is kept only for historical migrations.
+
+        It is a BooleanField subclass, so every `isinstance(x, (BooleanField,
+        NullBooleanField))` had a second operand that could never change the result.
+        The day Django drops the class, a module-level import of it stops the boot.
+        """
+        offenders = []
+        for path, source in sources():
+            for node in ast.walk(ast.parse(source)):
+                if (isinstance(node, ast.Attribute) and node.attr == 'NullBooleanField'):
+                    offenders.append('{0}:{1}'.format(rel(path), node.lineno))
+                elif isinstance(node, ast.ImportFrom):
+                    for alias in node.names:
+                        if alias.name == 'NullBooleanField':
+                            offenders.append('{0}:{1}'.format(rel(path), node.lineno))
+        self.assertEqual(offenders, [],
+                         msg='use BooleanField; NullBooleanField is a subclass of it')
+
+    def test_format_html_is_never_called_without_arguments(self):
+        """Deprecated in Django 5.0, a TypeError in 6.0.
+
+        Its only effect in that shape is mark_safe(), which is what to write instead.
+        """
+        offenders = []
+        for path, source in sources():
+            for node in ast.walk(ast.parse(source)):
+                if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                        and node.func.id == 'format_html'
+                        and not node.args[1:] and not node.keywords):
+                    offenders.append('{0}:{1}'.format(rel(path), node.lineno))
+        self.assertEqual(offenders, [],
+                         msg='format_html() with no args is deprecated; use mark_safe()')
+
+
 class RemovedModelMetaTests(SimpleTestCase):
     """``index_together`` went in Django 5.1. Regression net."""
 

@@ -224,27 +224,6 @@ class ReversionPlugin(ReversionRegisterPlugin):
 				obj._xadmin_recover_insert = True
 		return __()
 
-	def do_post(self, __):
-		def _method():
-			self.revision_context_manager.set_user(self.user)
-			comment = ''
-			admin_view = self.admin_view
-			if isinstance(admin_view, CreateAdminView):
-				comment = _("Initial version.")
-			elif isinstance(admin_view, UpdateAdminView):
-				comment = _("Change version.")
-			elif isinstance(admin_view, RevisionView):
-				comment = _("Revert version.")
-			elif isinstance(admin_view, RecoverView):
-				comment = _("Recover version.")
-			elif isinstance(admin_view, DeleteAdminView):
-				comment = _("Deleted %(verbose_name)s.") % {
-					"verbose_name": self.opts.verbose_name}
-			self.revision_context_manager.set_comment(comment)
-			return __()
-
-		return _method
-
 	def log_obj(self, log, *args, **kwargs):
 		"""Adds a default log message for object revision."""
 		if reversion.is_active() and not reversion.get_comment():

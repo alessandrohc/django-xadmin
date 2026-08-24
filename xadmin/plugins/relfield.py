@@ -1,6 +1,7 @@
 from django import forms
 from django.db import models
-from django.utils.html import escape, format_html
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 from django.utils.text import Truncator
 from django.utils.translation import gettext as _
 
@@ -36,7 +37,12 @@ class ForeignKeySearchWidget(forms.Widget):
         if rel_limit_choices_to:
             for key in rel_limit_choices_to:
                 base_attrs['data-choices'] += "&_p_%s=%s" % (key, rel_limit_choices_to[key])
-            base_attrs['data-choices'] = format_html(base_attrs['data-choices'])
+            # mark_safe, not format_html: calling format_html() with no args is
+            # deprecated since Django 5.0 (RemovedInDjango60Warning) and becomes a
+            # TypeError in 6.0. Its only effect here was mark_safe(str.format()), and
+            # the value carries no format placeholders -- so this is the same result,
+            # including keeping the "&" unescaped in the rendered attribute.
+            base_attrs['data-choices'] = mark_safe(base_attrs['data-choices'])
         base_attrs.update(extra_attrs)
         return super().build_attrs(base_attrs, extra_attrs=extra_attrs)
 

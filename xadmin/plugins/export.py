@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured, SuspiciousOperation
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import BooleanField, NullBooleanField
+from django.db.models import BooleanField
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.utils.encoding import force_str, smart_str
@@ -76,7 +76,7 @@ class ExportPlugin(BaseAdminPlugin):
 
 	def _format_value(self, o):
 		if (o.field is None and getattr(o.attr, 'boolean', False)) or \
-				(o.field and isinstance(o.field, (BooleanField, NullBooleanField))):
+				(o.field and isinstance(o.field, BooleanField)):
 			value = o.value
 		elif str(o.text).startswith("<span class='text-muted'>"):
 			value = escape(str(o.text)[25:-7])

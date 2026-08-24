@@ -9,6 +9,10 @@ class Author(models.Model):
     # User.password in the #7369 leak. If it ever reaches a response, the
     # ?_fields= filter is not doing its job.
     secret = models.CharField(max_length=100, default='top-secret-value')
+    # Two booleans so the list filter can be exercised on both sides of nullability:
+    # only the nullable one should offer the "Unknown" choice.
+    is_active = models.BooleanField(default=True)
+    is_featured = models.BooleanField(null=True, default=None)
 
     class Meta:
         app_label = 'xadmin_fixture'

@@ -380,9 +380,10 @@ def display_for_field(value, field):
 
 	if field.flatchoices:
 		return dict(field.flatchoices).get(value, EMPTY_CHANGELIST_VALUE)
-	# NullBooleanField needs special-case null-handling, so it comes
+	# BooleanField covers the legacy NullBooleanField too -- it is a subclass, kept by
+	# Django only for historical migrations.
 	# before the general null test.
-	elif isinstance(field, models.BooleanField) or isinstance(field, models.NullBooleanField):
+	elif isinstance(field, models.BooleanField):
 		return boolean_icon(value)
 	elif value is None:
 		return EMPTY_CHANGELIST_VALUE
