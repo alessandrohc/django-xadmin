@@ -1,7 +1,7 @@
 # coding=utf-8
 import functools
 import inspect
-from functools import update_wrapper, lru_cache
+from functools import update_wrapper
 from django.template.engine import Engine
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -28,7 +28,12 @@ class MergeAdminMetaclass(type):
 
 class AdminRoute:
 	"""Route to include other urls"""
-	path = re_path
+	# staticmethod is required: re_path/path are functools.partial objects and, from
+	# Python 3.14 on, partial is a method descriptor. Without staticmethod,
+	# self.path(route, view) would pass self as the first positional argument and
+	# Django's _path() would raise TypeError while building site.urls -- a boot
+	# failure. On 3.13 and older partial has no __get__, so wrapping is a no-op.
+	path = staticmethod(re_path)
 
 	def __init__(self, route, app_name=None, namespace=None):
 		self.route = route
@@ -45,7 +50,8 @@ class AdminRoute:
 class AdminUrl:
 	"""Similar to Django urls, stores the definitions of a view
 	"""
-	path = re_path
+	# See the note on AdminRoute.path.
+	path = staticmethod(re_path)
 
 	def __init__(self, route, cls_func, name=None, **kwargs):
 		self.route = route
@@ -82,7 +88,8 @@ class AdminUrl:
 
 class AdminPath(AdminUrl):
 	"""URL specification that does not use a pattern"""
-	path = dj_path
+	# See the note on AdminRoute.path.
+	path = staticmethod(dj_path)
 
 
 class BaseAdminOption:
@@ -393,11 +400,11 @@ class AdminSite:
 			class MyAdminSite(AdminSite):
 
 				def get_urls(self):
-					from django.conf.urls import url
+					from django.urls import re_path
 
 					urls = super(MyAdminSite, self).get_urls()
 					urls += [
-						url(r'^my_view/$', self.admin_view(some_view))
+						re_path(r'^my_view/$', self.admin_view(some_view))
 					]
 					return urls
 
@@ -475,9 +482,16 @@ class AdminSite:
 
 		return merge_class
 
-	@lru_cache(maxsize=None)
 	def get_plugins(self, admin_view_class, *option_classes):
-		"""Extracts the registered plugins in the view hierarchy"""
+		"""Extracts the registered plugins in the view hierarchy.
+
+		Deliberately NOT cached. It used to carry @lru_cache(maxsize=None), and measured
+		`hits=0, misses=5496` after a full URLconf load on the host project: it cannot
+		hit, because get_view_class short-circuits on _admin_view_cache before ever
+		reaching here, and that cache is keyed just as finely. So it was an unbounded
+		retainer holding 5,496 entries -- plus `self`, keeping the whole site alive --
+		and nothing else (#7368).
+		"""
 		from xadmin.views import BaseAdminView
 		plugins = []
 		# option classes affect all plugins but the impact of this is mitigated by name caching
@@ -536,8 +550,37 @@ class AdminSite:
 		return view_class.as_view(*(initargs or ()), **(initkwargs or {}))
 
 	def create_model_admin_view(self, admin_view_class, model, option_class, initargs=None, initkwargs=None):
-		view_class = self.get_view_class(admin_view_class, option_class)
-		return view_class.as_view(*(initargs or ()), **(initkwargs or {}))
+		"""A view that merges its admin class on first use, not at URLconf load.
+
+		get_urls() calls this once per (model, modelview). Building the merged class
+		eagerly meant a web worker paid for all of them before serving anything:
+		measured on the host project, 5,496 classes, 2.07 s and 100 MB of RSS -- for
+		views it had used none of. Deferring the merge to the first request that
+		actually reaches each URL took the same boot to 0.12 s and 12 MB, with 57
+		classes built instead of 5,496 (#7368).
+
+		The URL patterns are unaffected: the callable is what changes, not the route,
+		so reverse() and the urlconf shape stay identical. get_view_class() keeps its
+		own cache, so a merge still happens at most once per (view, admin) pair; the
+		holder below just avoids re-running as_view() on every request.
+		"""
+		holder = {}
+
+		def view(request, *args, **kwargs):
+			if 'view' not in holder:
+				view_class = self.get_view_class(admin_view_class, option_class)
+				holder['view'] = view_class.as_view(*(initargs or ()), **(initkwargs or {}))
+			return holder['view'](request, *args, **kwargs)
+
+		# wrap_view() runs update_wrapper() over this, and Django reads these for the
+		# urlconf, so carry the identity of the view being deferred rather than the
+		# closure's.
+		view.__name__ = admin_view_class.__name__
+		view.__module__ = admin_view_class.__module__
+		view.__doc__ = admin_view_class.__doc__
+		view.admin_view_class = admin_view_class
+		view.admin_option_class = option_class
+		return view
 
 	def wrap_view(self, view, cacheable=False):
 		"""View that passes through admin permissions"""

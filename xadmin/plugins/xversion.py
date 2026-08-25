@@ -24,7 +24,7 @@ from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
 from django.utils.text import capfirst
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from django.utils.functional import cached_property
 from reversion import RegistrationError
@@ -85,7 +85,9 @@ def _register_model(admin, model):
 							break
 				if fk_name:
 					_autoregister(admin, inline_model, follow=[fk_name])
-					if not inline_opts.get_field(fk_name).remote_field.is_hidden():
+					# .hidden rather than is_hidden(): the method was removed in Django 5.1 and
+					# the property exists on 4.2 as well, so no version predicate is needed.
+					if not inline_opts.get_field(fk_name).remote_field.hidden:
 						field = inline_opts.get_field(fk_name)
 						accessor = field.remote_field.get_accessor_name()
 						inline_fields.append(accessor)
@@ -221,27 +223,6 @@ class ReversionPlugin(ReversionRegisterPlugin):
 				obj._state.adding = True
 				obj._xadmin_recover_insert = True
 		return __()
-
-	def do_post(self, __):
-		def _method():
-			self.revision_context_manager.set_user(self.user)
-			comment = ''
-			admin_view = self.admin_view
-			if isinstance(admin_view, CreateAdminView):
-				comment = _("Initial version.")
-			elif isinstance(admin_view, UpdateAdminView):
-				comment = _("Change version.")
-			elif isinstance(admin_view, RevisionView):
-				comment = _("Revert version.")
-			elif isinstance(admin_view, RecoverView):
-				comment = _("Recover version.")
-			elif isinstance(admin_view, DeleteAdminView):
-				comment = _("Deleted %(verbose_name)s.") % {
-					"verbose_name": self.opts.verbose_name}
-			self.revision_context_manager.set_comment(comment)
-			return __()
-
-		return _method
 
 	def log_obj(self, log, *args, **kwargs):
 		"""Adds a default log message for object revision."""
@@ -392,7 +373,7 @@ class RevisionDetailAdminUtil(DetailAdminUtil):
 
 class RevisionDetailResultsPlugin(BaseAdminPlugin):
 	"""Plugin to change the formatting of the details view results"""
-	revision_detail_empty_value = _('Not filled (empty)')
+	revision_detail_empty_value = _lazy('Not filled (empty)')
 	revision_detail_result_field = ResultField
 
 	def init_request(self, *args, **kwargs):

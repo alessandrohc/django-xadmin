@@ -25,7 +25,7 @@ from django.utils.http import urlencode
 from django.utils.itercompat import is_iterable
 from django.utils.safestring import mark_safe
 from django.utils.text import capfirst, Truncator
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.csrf import csrf_protect
 from django.views.generic import View
 
@@ -442,8 +442,8 @@ class CommAdminView(BaseAdminView):
 	base_template = 'xadmin/base_site.html'
 	menu_template = 'xadmin/includes/sitemenu_default.html'
 
-	site_title = getattr(settings, "XADMIN_TITLE", _("Django Xadmin"))
-	site_footer = getattr(settings, "XADMIN_FOOTER_TITLE", _("my-company.inc"))
+	site_title = getattr(settings, "XADMIN_TITLE", _lazy("Django Xadmin"))
+	site_footer = getattr(settings, "XADMIN_FOOTER_TITLE", _lazy("my-company.inc"))
 
 	global_models_icon = {}
 	default_model_icon = None

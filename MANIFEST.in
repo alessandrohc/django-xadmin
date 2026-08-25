@@ -1,4 +1,7 @@
 include README.rst
+# setup.py's load_requirements() opens this while setup() runs, and pip runs setup()
+# from the unpacked sdist -- without it the sdist cannot be installed at all.
+include requirements.txt
 include LICENSE
 include MANIFEST.in
 recursive-include xadmin/locale *

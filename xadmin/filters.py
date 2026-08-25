@@ -161,7 +161,9 @@ class BooleanFieldListFilter(ListFieldFilter):
 
 	@classmethod
 	def test(cls, field, request, params, model, admin_view, field_path):
-		return isinstance(field, (models.BooleanField, models.NullBooleanField))
+		# NullBooleanField is a BooleanField subclass, so the second operand never
+		# changed the result. Django keeps the class only for historical migrations.
+		return isinstance(field, models.BooleanField)
 
 	def choices(self):
 		for lookup, title in (
@@ -180,7 +182,10 @@ class BooleanFieldListFilter(ListFieldFilter):
 				),
 				'display': title,
 			}
-		if isinstance(self.field, models.NullBooleanField):
+		# Keyed off nullability rather than the legacy class: NullBooleanField forced
+		# null=True in its own __init__, so this is equivalent for the old class and
+		# additionally offers the filter on any modern BooleanField(null=True).
+		if self.field.null:
 			yield {
 				'selected': self.lookup_isnull_val == 'True',
 				'query_string': self.query_string(
@@ -272,9 +277,6 @@ class DateFieldListFilter(ListFieldFilter):
 		if now.tzinfo is not None:
 			current_tz = timezone.get_current_timezone()
 			now = now.astimezone(current_tz)
-			if hasattr(current_tz, 'normalize'):
-				# available for pytz time zones
-				now = current_tz.normalize(now)
 
 		if isinstance(field, models.DateTimeField):
 			today = now.replace(hour=0, minute=0, second=0, microsecond=0)

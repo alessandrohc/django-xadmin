@@ -28,6 +28,11 @@ ERROR_FLAG = 'e'
 
 DOT = '.'
 
+# i18n-eager: deliberately gettext, not gettext_lazy -- plus_base's ResultJsonField does
+# `isinstance(self.text, str)` on this value (publique/xadmin_site/xplugins/detailutils.py),
+# and plugins/editable.py assigns it straight into that `text`. A lazy proxy fails that
+# isinstance and silently changes the branch taken. Note this constant is defined twice --
+# here and in the sibling module -- so the two must stay in step. See #7368.
 # Text to display within change-list table cells if the value is blank.
 EMPTY_CHANGELIST_VALUE = _('Null')
 

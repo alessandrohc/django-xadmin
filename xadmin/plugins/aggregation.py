@@ -2,7 +2,7 @@
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Avg, Max, Min, Count, Sum
 from django.forms import Media
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
 from xadmin.sites import site
 from xadmin.util import display_for_field
@@ -13,7 +13,7 @@ AGGREGATE_METHODS = {
 	'min': Min, 'max': Max, 'avg': Avg, 'sum': Sum, 'count': Count
 }
 AGGREGATE_TITLE = {
-	'min': _('Min'), 'max': _('Max'), 'avg': _('Avg'), 'sum': _('Sum'), 'count': _('Count')
+	'min': _lazy('Min'), 'max': _lazy('Max'), 'avg': _lazy('Avg'), 'sum': _lazy('Sum'), 'count': _lazy('Count')
 }
 
 

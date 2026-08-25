@@ -1,3 +1,12 @@
+# coding=utf-8
+"""AuditLog: bulk thresholds, object resolution and what ends up in xadmin.models.Log.
+
+Ported verbatim from tests/xtests/auditlog/tests.py (#7369). Only the DummyModel import
+changed. The legacy tests/ tree could not run past Django 5.0 -- its runner calls
+run_tests(extra_tests=...), removed in 5.0 -- so these 52 tests were the only coverage
+of xadmin/auditlog.py (93 statements, used by at least six plugins of the host project)
+and nothing was running them: matrix.sh only drives test_xadmin/.
+"""
 from unittest.mock import patch
 
 from django.contrib.auth.models import AnonymousUser
@@ -7,7 +16,7 @@ from django.test.client import RequestFactory
 from xadmin.auditlog import AuditLog, BULK_LOG_THRESHOLD, _resolve_objs, _get_pks
 from xadmin.models import Log
 
-from .models import DummyModel
+from test_xadmin.fixtureapp.models import DummyModel
 
 
 class AuditLogTestBase(TestCase):

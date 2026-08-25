@@ -13,6 +13,7 @@ from formtools.wizard.views import StepsHelper
 
 from xadmin.plugins.utils import get_context_dict
 from xadmin.sites import site
+from xadmin.util import is_ajax
 from xadmin.views import BaseAdminPlugin, ModelFormAdminView
 
 
@@ -53,7 +54,7 @@ class WizardFormPlugin(BaseAdminPlugin):
 
 	# Plugin replace methods
 	def init_request(self, *args, **kwargs):
-		if self.request.is_ajax() or ("_ajax" in self.request.GET) or not hasattr(self.request, 'session') or (
+		if is_ajax(self.request) or ("_ajax" in self.request.GET) or not hasattr(self.request, 'session') or (
 				args and not self.wizard_for_update):
 			# update view
 			return False

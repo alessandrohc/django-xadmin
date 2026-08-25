@@ -50,44 +50,47 @@ Get Started
 Install
 ^^^^^^^
 
-Xadmin is best installed via PyPI. To install the latest version, run:
+**Do not install this from PyPI.** The ``xadmin`` name on PyPI is an unrelated project,
+abandoned at 0.6.1; this is a maintained fork and is installed from git:
 
 .. code:: bash
 
-    pip install xadmin
+    pip install git+https://github.com/alessandrohc/django-xadmin.git@python3-dj32
 
-or Install from github source:
-
-.. code:: bash
-
-    pip install git+git://github.com/sshwsfc/xadmin.git
-
-Install from github source for Django 2.0:
-
-.. code:: bash
-
-    pip install https://codeload.github.com/sshwsfc/xadmin/zip/django2
-
-Install Requires 
+Install Requires
 ----------------
 
--  `django`_ >=2
+These are declared in ``requirements.txt`` and installed automatically. None of them is
+optional, despite what older revisions of this file said -- ``xversion`` is a default
+plugin and imports ``reversion`` unconditionally, and ``wizard`` imports ``formtools``.
 
--  `django-crispy-forms`_ >=1.6.0 (For xadmin crispy forms)
+-  `django`_ >=4.2,<6.0 (tested on 4.2 and 5.2, Python 3.10 through 3.14)
 
--  `django-reversion`_ ([OPTION] For object history and reversion feature, please select right version by your django, see `changelog`_ )
+-  `django-crispy-forms`_ + ``crispy-bootstrap4``
 
--  `django-formtools`_ ([OPTION] For wizward form)
+-  `django-reversion`_ (object history and reversion, see `changelog`_)
 
--  `xlwt`_ ([OPTION] For export xls files)
+-  `django-formtools`_ (wizard forms)
 
--  `xlsxwriter`_ ([OPTION] For export xlsx files)
+-  `django-import-export`_ (the import/export plugin)
+
+Optional extras
+---------------
+
+-  `xlwt`_ (``pip install xadmin[Excel]``, for exporting .xls)
+
+-  `xlsxwriter`_ (``pip install xadmin[Excel]``, for exporting .xlsx)
+
+Note that CSV is deliberately not an export format: a CSV carries no cell type, so a
+spreadsheet re-interprets each value on open and a cell starting with ``=``, ``+``,
+``-`` or ``@`` is executed as a formula. The binary formats carry the type.
 
 .. _django: http://djangoproject.com
 .. _django-crispy-forms: http://django-crispy-forms.rtfd.org
 .. _django-reversion: https://github.com/etianen/django-reversion
 .. _changelog: https://github.com/etianen/django-reversion/blob/master/CHANGELOG.rst
 .. _django-formtools: https://github.com/django/django-formtools
+.. _django-import-export: https://github.com/django-import-export/django-import-export
 .. _xlwt: http://www.python-excel.org/
 .. _xlsxwriter: https://github.com/jmcnamara/XlsxWriter
 

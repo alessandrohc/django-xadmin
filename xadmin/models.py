@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import models
+from django.db import DEFAULT_DB_ALIAS, connections, models
 from django.db.models.base import ModelBase
 from django.db.models.signals import post_migrate
 from django.urls.base import reverse
@@ -25,13 +25,20 @@ def add_view_permissions(sender, **kwargs):
 	  1. Fetch all content types (1 query)
 	  2. Fetch all existing view_* permissions (1 query)
 	  3. Bulk-create only the missing ones (1 query)
+
+	Every query is bound to the alias post_migrate hands us. Ignoring it made the hook
+	read and write the default connection no matter which database was migrated, which
+	is silently wrong on a multi-database install. See #7205.
 	"""
+	# The database this post_migrate is actually about.
+	db = kwargs.get('using', DEFAULT_DB_ALIAS)
+
 	# fetch all content types in a single query
-	all_content_types = ContentType.objects.all()
+	all_content_types = ContentType.objects.using(db).all()
 
 	# build a set of (content_type_id, codename) for O(1) lookup — 1 query
 	existing_view_permissions = set(
-		Permission.objects.filter(codename__startswith="view_").values_list(
+		Permission.objects.using(db).filter(codename__startswith="view_").values_list(
 			"content_type_id", "codename"
 		)
 	)
@@ -49,7 +56,25 @@ def add_view_permissions(sender, **kwargs):
 
 	# bulk-create all missing permissions in a single query
 	if permissions_to_create:
-		Permission.objects.bulk_create(permissions_to_create, ignore_conflicts=True)
+		# ignore_conflicts is gated on the backend, not assumed. It compiles to
+		# ON CONFLICT DO NOTHING (Postgres) / INSERT IGNORE (MySQL); mssql-django
+		# declares supports_ignore_conflicts = False and Django then raises
+		# NotSupportedError before touching the database.
+		#
+		# That raise is not a local failure. This receiver is connected at module
+		# import, while contenttypes and auth connect theirs from AppConfig.ready() --
+		# a later phase -- so this one fires FIRST, and Django 4.2's Signal.send() is a
+		# list comprehension: whatever raises here takes create_contenttypes and
+		# create_permissions down with it, leaving newly migrated models with no
+		# content type and no permissions at all. See #7205.
+		#
+		# The flag is redundant anyway: the comprehension above already filtered out
+		# every view_* permission that exists, so a sequential migrate has no conflict
+		# left to ignore. It stays only as belt-and-braces against a concurrent run.
+		Permission.objects.using(db).bulk_create(
+			permissions_to_create,
+			ignore_conflicts=connections[db].features.supports_ignore_conflicts,
+		)
 
 
 # ensure view permissions exist after every migration

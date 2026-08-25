@@ -38,10 +38,6 @@
                 <input type="checkbox" class="form-check-input" id="export_xls_header" name="export_xls_header" checked="checked" value="on">
                 <label class="form-check-label" for="export_xls_header">{% trans "Export with table header." %}</label>
                 {% endif %}
-                {% if et.type == "csv" %}
-                <input type="checkbox" class="form-check-input" id="export_csv_header" name="export_csv_header" checked="checked" value="on">
-                <label class="form-check-label" for="export_csv_header">{% trans "Export with table header." %}</label> 
-                {% endif %}
                 {% if et.type == "xml" %}
                 <input type="checkbox" class="form-check-input" id="export_xml_format" name="export_xml_format" checked="checked" value="on">
                 <label class="form-check-label" for="export_xml_format">{% trans "Export with format." %}</label>

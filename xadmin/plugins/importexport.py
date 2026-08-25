@@ -216,17 +216,24 @@ class ImportView(ImportBaseView):
 			import_file = form.cleaned_data['import_file']
 			# first always write the uploaded file to disk as it may be a
 			# memory file or else based on settings upload handlers
-			tmp_storage = self.get_tmp_storage_class()()
+			# django-import-export 3.0 moved the read mode (and the encoding) out of the
+			# save()/read() calls and into BaseStorage.__init__, so passing them as
+			# positional arguments raises TypeError -- a deterministic 500 on every
+			# upload. This mirrors what import_export.admin.ImportMixin does. See #7369.
+			tmp_storage = self.get_tmp_storage_class()(
+				encoding=None if input_format.is_binary() else self.from_encoding,
+				read_mode=input_format.get_read_mode(),
+			)
 			data = bytes()
 			for chunk in import_file.chunks():
 				data += chunk
 
-			tmp_storage.save(data, input_format.get_read_mode())
+			tmp_storage.save(data)
 
 			# then read the file, using the proper format-specific mode
 			# warning, big files may exceed memory
 			try:
-				data = tmp_storage.read(input_format.get_read_mode())
+				data = tmp_storage.read()
 				if not input_format.is_binary() and self.from_encoding:
 					data = force_str(data, self.from_encoding)
 				dataset = input_format.create_dataset(data)
@@ -278,8 +285,13 @@ class ImportProcessView(ImportBaseView):
 			input_format = import_formats[
 				int(confirm_form.cleaned_data['input_format'])
 			]()
-			tmp_storage = self.get_tmp_storage_class()(name=confirm_form.cleaned_data['import_file_name'])
-			data = tmp_storage.read(input_format.get_read_mode())
+			# Same signature change as in ImportView above (#7369).
+			tmp_storage = self.get_tmp_storage_class()(
+				name=confirm_form.cleaned_data['import_file_name'],
+				encoding=None if input_format.is_binary() else self.from_encoding,
+				read_mode=input_format.get_read_mode(),
+			)
+			data = tmp_storage.read()
 			if not input_format.is_binary() and self.from_encoding:
 				data = force_str(data, self.from_encoding)
 			dataset = input_format.create_dataset(data)
@@ -299,11 +311,19 @@ class ImportProcessView(ImportBaseView):
 				content_type_id = ContentType.objects.get_for_model(self.model).pk
 				for row in result:
 					if row.import_type != row.IMPORT_TYPE_ERROR and row.import_type != row.IMPORT_TYPE_SKIP:
-						LogEntry.objects.log_action(
+						# create() rather than log_action(): the latter was deprecated in
+						# Django 5.1 (RemovedInDjango60Warning) and this call sits inside
+						# the per-row loop, so a 10k-row import emitted 10k warnings.
+						# This is byte-for-byte what log_action does -- str() on the id
+						# and the 200-char truncation included; the json.dumps branch does
+						# not apply because change_message here is always a string. Its
+						# replacement, log_actions(), is NOT equivalent: it changes
+						# object_repr, the content type and the grouping. See #7369.
+						LogEntry.objects.create(
 							user_id=request.user.pk,
 							content_type_id=content_type_id,
-							object_id=row.object_id,
-							object_repr=row.object_repr,
+							object_id=str(row.object_id),
+							object_repr=row.object_repr[:200],
 							action_flag=logentry_map[row.import_type],
 							change_message="%s through import_export" % row.import_type,
 						)

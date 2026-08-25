@@ -3,7 +3,7 @@ from django.contrib.auth.views import LoginView as AuthLoginView
 from django.contrib.auth.views import LogoutView as logout
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 
@@ -15,7 +15,7 @@ from xadmin.views.dashboard import Dashboard
 
 
 class IndexView(Dashboard):
-	title = _("Main Dashboard")
+	title = _lazy("Main Dashboard")
 	icon = "fa fa-tachometer-alt"
 
 	def get_page_id(self):
@@ -45,7 +45,7 @@ class AuthBaseAdminView(BaseAdminView):
 
 
 class LoginView(AuthBaseAdminView, AuthLoginView):
-	title = _("Please Login")
+	title = _lazy("Please Login")
 	login_form = AdminAuthenticationForm
 	authentication_form = None
 	login_template = None
@@ -124,7 +124,7 @@ class LoginView(AuthBaseAdminView, AuthLoginView):
 
 
 class LogoutView(AuthBaseAdminView):
-	title = _("Logout Success")
+	title = _lazy("Logout Success")
 
 	logout_template = None
 	need_site_permission = False

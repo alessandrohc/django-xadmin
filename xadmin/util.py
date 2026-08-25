@@ -23,6 +23,22 @@ from django.templatetags.static import static
 from django.core.exceptions import FieldDoesNotExist
 import json
 
+
+def is_ajax(request):
+	"""Whether the request was issued by XMLHttpRequest.
+
+	Django removed ``HttpRequest.is_ajax()`` in 4.0. xadmin called it in five places,
+	one of them on every admin view, so the whole admin depended on the host project
+	putting the method back in middleware -- see #7093. This is the predicate the
+	removed method used, and it works on every supported Django version.
+
+	Note the usual caveat that came with the original: it only detects libraries that
+	set the header (jQuery does, and xadmin's own JavaScript is jQuery-based). It is
+	not a substitute for content negotiation.
+	"""
+	return request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+
 # contrib admin utils
 NestedObjects = admin_utils.NestedObjects
 label_for_field = admin_utils.label_for_field
@@ -364,9 +380,10 @@ def display_for_field(value, field):
 
 	if field.flatchoices:
 		return dict(field.flatchoices).get(value, EMPTY_CHANGELIST_VALUE)
-	# NullBooleanField needs special-case null-handling, so it comes
+	# BooleanField covers the legacy NullBooleanField too -- it is a subclass, kept by
+	# Django only for historical migrations.
 	# before the general null test.
-	elif isinstance(field, models.BooleanField) or isinstance(field, models.NullBooleanField):
+	elif isinstance(field, models.BooleanField):
 		return boolean_icon(value)
 	elif value is None:
 		return EMPTY_CHANGELIST_VALUE
