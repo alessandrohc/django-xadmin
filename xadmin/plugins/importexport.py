@@ -169,14 +169,22 @@ class ImportView(ImportBaseView):
 		if not (self.has_change_permission() and self.has_add_permission()):
 			raise PermissionDenied
 
-		resource = self.get_import_resource_class()(**self.get_import_resource_kwargs(request, *args, **kwargs))
+		# The class goes into a local because the 4.x ImportForm requires the LIST of
+		# resources; it used to be discarded right after instantiating (#7396).
+		resource_class = self.get_import_resource_class()
+		resource = resource_class(**self.get_import_resource_kwargs(request, *args, **kwargs))
 
 		context = super(ImportView, self).get_context()
 
 		import_formats = self.get_import_formats()
+		# django-import-export 4.x changed the signature to
+		# ImportForm(formats, resources, **kwargs): `resources` became POSITIONAL and
+		# mandatory (_init_resources raises ValueError on an empty list), and *args is
+		# gone, so data/files only go in BY NAME (#7396).
 		form = ImportForm(import_formats,
-		                  request.POST or None,
-		                  request.FILES or None)
+		                  [resource_class],
+		                  data=request.POST or None,
+		                  files=request.FILES or None)
 
 		context['title'] = _("Import") + ' ' + self.opts.verbose_name
 		context['form'] = form
@@ -200,18 +208,28 @@ class ImportView(ImportBaseView):
 		if not (self.has_change_permission() and self.has_add_permission()):
 			raise PermissionDenied
 
-		resource = self.get_import_resource_class()(**self.get_import_resource_kwargs(request, *args, **kwargs))
+		# The class goes into a local because the 4.x ImportForm requires the LIST of
+		# resources; it used to be discarded right after instantiating (#7396).
+		resource_class = self.get_import_resource_class()
+		resource = resource_class(**self.get_import_resource_kwargs(request, *args, **kwargs))
 
 		context = super(ImportView, self).get_context()
 
 		import_formats = self.get_import_formats()
+		# django-import-export 4.x changed the signature to
+		# ImportForm(formats, resources, **kwargs): `resources` became POSITIONAL and
+		# mandatory (_init_resources raises ValueError on an empty list), and *args is
+		# gone, so data/files only go in BY NAME (#7396).
 		form = ImportForm(import_formats,
-		                  request.POST or None,
-		                  request.FILES or None)
+		                  [resource_class],
+		                  data=request.POST or None,
+		                  files=request.FILES or None)
 
 		if request.POST and form.is_valid():
+			# 4.x renamed the `input_format` field to `format`: it moved up into
+			# ImportExportFormBase, shared with the export form (#7396).
 			input_format = import_formats[
-				int(form.cleaned_data['input_format'])
+				int(form.cleaned_data['format'])
 			]()
 			import_file = form.cleaned_data['import_file']
 			# first always write the uploaded file to disk as it may be a
@@ -254,7 +272,8 @@ class ImportView(ImportBaseView):
 				context['confirm_form'] = ConfirmImportForm(initial={
 					'import_file_name': tmp_storage.name,
 					'original_file_name': import_file.name,
-					'input_format': form.cleaned_data['input_format'],
+					# The 4.x ConfirmImportForm calls the field `format` as well (#7396).
+					'format': form.cleaned_data['format'],
 				})
 
 		context['title'] = _("Import") + ' ' + self.opts.verbose_name
@@ -282,8 +301,9 @@ class ImportProcessView(ImportBaseView):
 		confirm_form = ConfirmImportForm(request.POST)
 		if confirm_form.is_valid():
 			import_formats = self.get_import_formats()
+			# Same rename: the ConfirmImportForm hidden field became `format` in 4.x (#7396).
 			input_format = import_formats[
-				int(confirm_form.cleaned_data['input_format'])
+				int(confirm_form.cleaned_data['format'])
 			]()
 			# Same signature change as in ImportView above (#7369).
 			tmp_storage = self.get_tmp_storage_class()(
@@ -453,7 +473,10 @@ class ExportMenuPlugin(ExportMixin, BaseAdminPlugin):
 	def _form_bootstrap_styles(form):
 		"""set bootstrap styles"""
 		attrs = {'class': 'form-control'}
-		for field_name in ['file_format']:
+		# `file_format` was the field name in 3.x; in 4.x the format select comes from
+		# ImportExportFormBase and is called `format`. Without this the `for` matches no
+		# field at all and the modal select SILENTLY loses form-control/required (#7396).
+		for field_name in ['format']:
 			if field_name in form.fields:
 				field = form.fields[field_name]
 				if field.widget.attrs is None:
@@ -465,7 +488,10 @@ class ExportMenuPlugin(ExportMixin, BaseAdminPlugin):
 
 	def block_top_toolbar(self, context, nodes):
 		formats = self.get_export_formats()
-		form = ExportForm(formats)
+		# In 4.x ExportForm inherits ImportExportFormBase, whose signature is
+		# (formats, resources, **kwargs) -- `resources` is positional and mandatory
+		# (#7396).
+		form = ExportForm(formats, [self.get_export_resource_class()])
 		self._form_bootstrap_styles(form)
 		context = get_context_dict(context or {})  # no error!
 		context.setdefault('export_to_email', bool(self.import_export_args.get('export_to_email', True)))
@@ -540,7 +566,11 @@ class ExportPlugin(ExportMixin, BaseAdminPlugin):
 		if not has_view_perm:
 			raise PermissionDenied
 
-		export_format = self.request.GET.get('file_format')
+		# The modal issues its GET using the form's FIELD NAME, which went from
+		# `file_format` to `format` in 4.x. The old name stays accepted so an export URL
+		# hand-built or bookmarked before #7396 keeps working.
+		export_format = (self.request.GET.get('format')
+		                 or self.request.GET.get('file_format'))
 		scope = self.request.GET.get('scope')
 
 		if not export_format:

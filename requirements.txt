@@ -1,6 +1,6 @@
 django>=4.2,<6.0
 django-crispy-forms==2.4
 crispy-bootstrap4==2025.6
-django-import-export==3.3.9
+django-import-export==4.4.1
 django-reversion==5.1.0
 django-formtools==2.5.1

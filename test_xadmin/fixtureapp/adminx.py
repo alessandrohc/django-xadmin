@@ -10,6 +10,7 @@ from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin  # noqa: F401  (keeps import order honest)
 
 from test_xadmin.fixtureapp.models import Author, Book
+from test_xadmin.fixtureapp.resources import BookResource
 
 
 class BookInline:
@@ -24,5 +25,18 @@ class AuthorAdmin:
     inlines = [BookInline]
 
 
+class BookAdmin:
+    list_display = ('title',)
+    # #7396: both import/export menu plugins only wake up when they find a resource
+    # class here. Book carries that role so the changelist exercises
+    # ExportMenuPlugin.block_top_toolbar (where the ExportForm call lives) and the
+    # import button, neither of which had any coverage. Author deliberately stays
+    # without import_export_args: it keeps the modelresource_factory() fallback covered.
+    import_export_args = {
+        'import_resource_class': BookResource,
+        'export_resource_class': BookResource,
+    }
+
+
 site.register(Author, AuthorAdmin)
-site.register(Book)
+site.register(Book, BookAdmin)

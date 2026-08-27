@@ -15,7 +15,13 @@
                         {{ form_params|safe }}
                         <input type="hidden" name="_selected_actions" value=""/>
                         <input type="hidden" name="_select_across" value=""/>
+                        {# #7396: the 4.x ExportForm has `resource` (a HiddenInput when there #}
+                        {# is a single resource) and `export_items` (MultipleHiddenInput). #}
+                        {# Without the branch below each renders an empty-label form-group. #}
                         {% for field in form %}
+                            {% if field.is_hidden %}
+                                {{ field }}
+                            {% else %}
                             <div class="form-group">
                                 {{ field.errors }}
                                 <label for="{{ field.id_for_label }}" class="col-form-label">{{ field.label }}</label>
@@ -24,6 +30,7 @@
                                     <p class="help">{{ field.field.help_text|safe }}</p>
                                 {% endif %}
                             </div>
+                            {% endif %}
                         {% endfor %}
 
                         <div class="form-group form-inline">
