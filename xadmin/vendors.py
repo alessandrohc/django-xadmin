@@ -181,15 +181,5 @@ vendors = {
 				'xadmin/vendor/select2/js/i18n/%(lang)s.js'
 			]
 		}
-	},
-	"multiselect": {
-		"css": {
-			'dev': 'xadmin/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css',
-			'production': 'xadmin/vendor/bootstrap-multiselect/css/bootstrap-multiselect.min.css',
-		},
-		"js": {
-			'dev': 'xadmin/vendor/bootstrap-multiselect/js/bootstrap-multiselect.js',
-			'production': 'xadmin/vendor/bootstrap-multiselect/js/bootstrap-multiselect.min.js',
-		}
 	}
 }
