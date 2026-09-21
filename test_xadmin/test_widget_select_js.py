@@ -64,6 +64,18 @@ class WidgetSelectJsTests(SimpleTestCase):
         self.assertGreaterEqual(self.source.count('state_messages'), 3,
                                 msg='plain, .select-search and [multiple] branches all opt in')
 
+    def test_dependent_selects_have_their_own_branch(self):
+        # #7612: a child select reloads its options from the admin URL when its parent changes
+        self.assertTrue(re.search(r"""find\(\s*["']select\.dependent-select""", self.source) is not None,
+                        msg='the dependent-select branch must exist')
+        self.assertTrue(':not(.dependent-select)' in self.source,
+                        msg='the plain branch must leave the dependent select to its own branch')
+
+    def test_dependent_branch_contract(self):
+        for snippet in ('dependent-parent', "'change'", '_dependent_field', '_dependent_parent',
+                        "labelField: 'name'", "getValue() === ''", 'setValue('):
+            self.assertTrue(snippet in self.source, msg='%s: part of the dependent-select contract' % snippet)
+
     def test_get_forms_join_multiple_values_for_the_in_lookup(self):
         self.assertTrue('formdata' in self.source,
                         msg='changelist filter forms submit __in=1,2; xadmin keeps the last GET value otherwise')

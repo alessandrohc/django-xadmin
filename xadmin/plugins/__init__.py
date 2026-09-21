@@ -11,6 +11,7 @@ PLUGINS = (
 	'chart',
 	'ajax',
 	'relfield',
+	'dependent',
 	'inline',
 	'topnav',
 	'portal',
