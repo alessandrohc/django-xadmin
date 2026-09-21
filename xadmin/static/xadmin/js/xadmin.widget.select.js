@@ -19,7 +19,8 @@
           f.find('select:not(.select-search):not(.selectize-off):not([multiple=multiple])').each(function () {
               var $el = $(this),
                   placeholder = getPlaceholder($el),
-                  options = {};
+                  // state_messages ships with the selectize alias (vendors.py), so no guard is needed here
+                  options = {plugins: ['state_messages']};
 
               if (placeholder) {
                   options.render = {
@@ -56,7 +57,7 @@
                     maxItems: 1,
                     // 'focus' loads once on first open (selectize.js:1817); true keeps eager mount-time load for .select-preload.
                     preload: preload ? true : 'focus',
-                    plugins: ["clear_button"],
+                    plugins: ["clear_button", "state_messages"],
                     load: function (query, callback) {
                         $.ajax({
                             url: $el.data('search-url') + $el.data('choices'),

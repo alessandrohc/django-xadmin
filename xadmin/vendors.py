@@ -157,8 +157,10 @@ vendors = {
 			               'xadmin/vendor/selectize/css/selectize.bootstrap4.css'],
 		},
 		"js": {
-			'dev': ['xadmin/vendor/selectize/js/selectize.js'],
-			'production': ['xadmin/vendor/selectize/js/selectize.min.js']
+			'dev': ['xadmin/vendor/selectize/js/selectize.js',
+			        'xadmin/js/xadmin.selectize.state_messages.js'],
+			'production': ['xadmin/vendor/selectize/js/selectize.min.js',
+			               'xadmin/js/xadmin.selectize.state_messages.js']
 		}
 	},
 	"select": {
@@ -173,10 +175,12 @@ vendors = {
 		"js": {
 			'dev': [
 				'xadmin/vendor/selectize/js/selectize.js',
+				'xadmin/js/xadmin.selectize.state_messages.js',
 				'xadmin/vendor/select2/js/select2.js',
 				'xadmin/vendor/select2/js/i18n/%(lang)s.js'],
 			'production': [
 				'xadmin/vendor/selectize/js/selectize.min.js',
+				'xadmin/js/xadmin.selectize.state_messages.js',
 				'xadmin/vendor/select2/js/select2.min.js',
 				'xadmin/vendor/select2/js/i18n/%(lang)s.js'
 			]
