@@ -10,7 +10,6 @@
     "bootstrap": "^4.6.0",
     "bootstrap-datepicker": ">=1.9.0",
     "bootstrap-modal": "^2.2.1",
-    "bootstrap-multiselect": ">=0.9.13",
     "bootstrap-timepicker": ">=0.5.2",
     "clockpicker": ">=0.0.7",
     "datejs": "datejs/Datejs",
@@ -19,8 +18,7 @@
     "jquery": "^3.4.1",
     "jquery-ui": ">=1.12.1",
     "nunjucks": ">=3.1.2",
-    "popper.js": ">=1.16.1",
-    "select2": "^4.1.0-rc.0"
+    "popper.js": ">=1.16.1"
   },
   "keywords": [],
   "main": "",

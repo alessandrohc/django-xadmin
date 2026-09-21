@@ -4,17 +4,6 @@ select.selectmultiple {
   width: 100%;
   height: 120px;
 }
-.select2-container{
-  max-width: 100%;
-}
-.select2-container.form-control{
-  padding: 0px;
-  border: 0px;
-}
-.select2-container .select2-choice {
-  height: 35px;
-  padding-top: 3px;
-}
 
 
 .select-placeholder .selectize-input {

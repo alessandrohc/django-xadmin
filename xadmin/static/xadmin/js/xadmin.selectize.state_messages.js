@@ -1,7 +1,7 @@
 /*
  * Selectize plugin "state_messages" — the state texts selectize 0.15.2 does not have. #7605
  *
- * The vendor is silent in three moments where select2 used to talk to the user:
+ * The vendor is silent in three moments where the previous select vendor talked to the user:
  *   - while `load` runs, nothing is shown (the only trace is a `loading` class no stylesheet uses);
  *   - a search that ends with no option simply CLOSES the dropdown (`refreshOptions`);
  *   - there is no notion of a minimum query length — the only way is a silent guard inside `load`.
@@ -105,7 +105,7 @@
         // BEFORE that, so an empty local result is not an answer yet — left alone, the vendor would
         // close the dropdown (and, in single mode with a value, hide the input) until the request
         // returns. Counting the pending search as "searching" keeps the dropdown open and the message
-        // visible from the keystroke to the answer, which is what select2 did.
+        // visible from the keystroke to the answer, as the previous vendor did.
         function searchPending(query) {
             return !!self.settings.load && query.length > 0 && !wasSearched(query);
         }

@@ -133,22 +133,6 @@ vendors = {
 			               'xadmin/vendor/blueimp-gallery/js/blueimp-gallery.min.js']
 		}
 	},
-	"select2": {
-		"css": {
-			'dev': ['xadmin/vendor/select2/css/select2.css'],
-			'production': ['xadmin/vendor/select2/css/select2.min.css']
-		},
-		"js": {
-			'dev': [
-				'xadmin/vendor/select2/js/select2.js',
-				'xadmin/vendor/select2/js/i18n/%(lang)s.js'
-			],
-			'production': [
-				'xadmin/vendor/select2/js/select2.min.js',
-				'xadmin/vendor/select2/js/i18n/%(lang)s.js'
-			]
-		}
-	},
 	"selectize": {
 		"css": {
 			'dev': ['xadmin/vendor/selectize/css/selectize.css',
@@ -163,27 +147,12 @@ vendors = {
 			               'xadmin/js/xadmin.selectize.state_messages.js']
 		}
 	},
-	"select": {
-		"css": {
-			'dev': ['xadmin/vendor/select2/css/select2.css',
-			        'xadmin/vendor/selectize/css/selectize.css',
-			        'xadmin/vendor/selectize/css/selectize.bootstrap4.css'],
-			'production': ['xadmin/vendor/select2/css/select2.min.css',
-			               'xadmin/vendor/selectize/css/selectize.css',
-			               'xadmin/vendor/selectize/css/selectize.bootstrap4.css'],
-		},
-		"js": {
-			'dev': [
-				'xadmin/vendor/selectize/js/selectize.js',
-				'xadmin/js/xadmin.selectize.state_messages.js',
-				'xadmin/vendor/select2/js/select2.js',
-				'xadmin/vendor/select2/js/i18n/%(lang)s.js'],
-			'production': [
-				'xadmin/vendor/selectize/js/selectize.min.js',
-				'xadmin/js/xadmin.selectize.state_messages.js',
-				'xadmin/vendor/select2/js/select2.min.js',
-				'xadmin/vendor/select2/js/i18n/%(lang)s.js'
-			]
-		}
-	}
 }
+
+# `select` is the alias every FK/M2M widget and filter asks for (widgets.py, filters.py,
+# plugins/relfield.py). It is the SAME object as `selectize`, on purpose: a host project
+# that hands the selectize stylesheet to its theme (plus_base empties selectize['css'])
+# gets the swap for `select` too, without knowing this alias exists. Until v4.1.0 the
+# alias also carried a second select vendor and its i18n catalog; nothing instantiates
+# it since the host moved every select to selectize (#7608).
+vendors['select'] = vendors['selectize']

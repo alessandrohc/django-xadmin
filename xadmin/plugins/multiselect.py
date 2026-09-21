@@ -83,7 +83,7 @@ class M2MSelectPlugin(BaseAdminPlugin):
 	``bootstrap-multiselect`` vendor. No admin ever declared it, so the vendor was
 	shipped for nobody; style, widget and vendor were dropped together (#7566).
 	Reinstating it means bringing the vendor back -- prefer ``m2m_transfer``, or
-	the selectize/select2 paths the host project already loads.
+	the selectize path the host project already loads.
 	"""
 
 	def init_request(self, *args, **kwargs):
