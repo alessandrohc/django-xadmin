@@ -89,3 +89,52 @@ class AdminSelectMultipleTests(SimpleTestCase):
         widget = AdminSelectMultiple()
         self.assertIn('select-multi', widget.attrs.get('class', ''))
         self.assertIn('xadmin.widget.select.js', str(widget.media))
+
+
+class SiteScopeTests(SimpleTestCase):
+    """One file for both worlds (#7616).
+
+    Inside ``form.exform`` (the admin templates declare it) every select is initialized;
+    anywhere else only ``select.selectize`` is, with the semantics the host project's site
+    initializer used to carry. The site file is gone, so these guards are the contract.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        with open(WIDGET_JS, encoding='utf-8') as handle:
+            cls.source = handle.read()
+
+    def test_the_scope_is_decided_by_the_form_class(self):
+        self.assertTrue("closest('form.exform')" in self.source,
+                        msg='admin scope: the container is, or lives inside, a form.exform (quick-form wrap, formset row)')
+        self.assertTrue('select.selectize:not(.selectize-off)' in self.source,
+                        msg='site scope: opt-in by the selectize class of the Hidra widgets')
+
+    def test_site_semantics_are_carried(self):
+        for snippet in ('allowEmptyOption', 'selectize-dont-allow-empty', 'delimiter', 'persist: false',
+                        'hideInput', '.destroy()'):
+            self.assertTrue(snippet in self.source, msg='%s: behaviour of the site initializer' % snippet)
+
+    def test_site_helpers_are_attached_to_the_instance(self):
+        for snippet in ('hidra_add_loading', 'hidra_remove_loading', 'hidra_show_error', 'hidra_clear_options',
+                        'selectize-class-container-loading'):
+            self.assertTrue(snippet in self.source, msg='%s: other site scripts call these helpers' % snippet)
+
+    def test_named_nunjucks_templates_render_and_the_admin_env_is_guarded(self):
+        self.assertTrue('data-selectize-nunjucks-render-item' in self.source)
+        self.assertTrue('nunjucks.render(' in self.source, msg='site widgets name precompiled .njk templates')
+        self.assertTrue(re.search(r"""\$\.fn\.nunjucks_env\s*(&&|\))""", self.source) is not None,
+                        msg='$.fn.nunjucks_env only exists where the admin loads the nunjucks alias')
+
+    def test_the_dependent_branch_is_the_unified_one(self):
+        for snippet in ('dependent-hide-empty', 'dependent-empty-label', '_dependentRestore', '_dependentBound'):
+            self.assertTrue(snippet in self.source, msg='%s: extras of the site branch (SEL-8) now serve both worlds' % snippet)
+
+    def test_the_file_survives_a_page_without_exform(self):
+        self.assertTrue(re.search(r"""if\s*\(\s*!\s*\$\.fn\.exform\s*\)""", self.source) is not None,
+                        msg='guard before registering in exform.renders')
+
+    def test_everything_mounts_through_the_single_helper(self):
+        self.assertEqual(self.source.count('.selectize('), 1,
+                         msg='every branch, admin or site, goes through mount()')

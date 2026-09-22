@@ -30,7 +30,7 @@
     }
 
     // Hook on the `.selectize-control` wrapper while a load is in flight. No admin stylesheet reacts
-    // to it today; it is the same class the site's form.widget.select.js uses for its own loading state.
+    // to it today; it is the class hidra_add_loading() in xadmin.widget.select.js sets on the wrapper (site scope).
     var LOADING_CLASS = 'selectize-has-loading';
     var MESSAGE_SELECTOR = '.selectize-state-message';
     var MESSAGE_CLASSES = 'selectize-state-message text-muted small px-3 py-2';
