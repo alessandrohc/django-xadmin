@@ -328,10 +328,11 @@
                 }
             }
             applyInitial(instance, initial);
-            // measured after the labelled empty option went in: a select offering only "All cities"
-            // is still something to show, so hide-empty and empty-label together never hide
+            // hide-empty is decided by the items the parent returned: the labelled empty option is
+            // not an item, so a widget asking for both (riocard FAQ, #7614) still hides the group
+            // while the parent has no children
             if (hideEmpty) {
-                $select.closest('.form-group').toggleClass('d-none', items.length === 0);
+                $select.closest('.form-group').toggleClass('d-none', !hadItems);
             }
         }
 

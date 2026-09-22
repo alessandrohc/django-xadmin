@@ -76,6 +76,14 @@ class WidgetSelectJsTests(SimpleTestCase):
                         "labelField: 'name'", "getValue() === ''", 'setValue('):
             self.assertTrue(snippet in self.source, msg='%s: part of the dependent-select contract' % snippet)
 
+    def test_hide_empty_measures_the_items_not_the_labelled_empty_option(self):
+        # #7614: a widget asking for hide-empty AND empty-label (riocard FAQ) must still hide the
+        # group while the parent has no children; the labelled empty option is not an item
+        self.assertTrue("toggleClass('d-none', !hadItems)" in self.source,
+                        msg='hide-empty is decided by the items the parent returned')
+        self.assertTrue("toggleClass('d-none', items.length === 0)" not in self.source,
+                        msg='measuring after the empty label went in never hides')
+
     def test_get_forms_join_multiple_values_for_the_in_lookup(self):
         self.assertTrue('formdata' in self.source,
                         msg='changelist filter forms submit __in=1,2; xadmin keeps the last GET value otherwise')
