@@ -44,14 +44,6 @@ function selectizeTask() {
         .pipe(gulp.dest('vendor/selectize'));
 }
 
-function select2Task() {
-    return gulp.src([`${node_modules}/select2/dist/**/*.js`,
-                     `${node_modules}/select2/dist/**/*.css`,
-                     `${node_modules}/select2/dist/**/i18n/*.js`,
-                     `!${node_modules}/select2/dist/**/select2.full*`])
-        .pipe(gulp.dest('vendor/select2'));
-}
-
 function datejsTask() {
     return gulp.src(`${node_modules}/datejs/src/**`)
         .pipe(gulp.dest('vendor/datejs/js'));
@@ -104,7 +96,6 @@ function bootstrapTask() {
         .pipe(gulp.dest('vendor/bootstrap'));
 }
 
-exports.select2 = select2Task;
 exports.selectize = selectizeTask;
 exports.jquery = jqueryTask;
 exports.nunjunks = nunjunksTask;
@@ -118,7 +109,6 @@ exports.default = gulp.series(
     //micropluginTask,
     fontAwesomeTask,
     selectizeTask,
-    select2Task,
     datejsTask,
     jqueryUITask,
     html5SortableTask,

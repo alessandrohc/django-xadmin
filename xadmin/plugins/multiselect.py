@@ -76,34 +76,24 @@ class SelectMultipleTransfer(forms.SelectMultiple):
 		return vendor('xadmin.widget.select-transfer.js', 'xadmin.widget.select-transfer.css')
 
 
-class SelectMultipleDropdown(forms.SelectMultiple):
-
-	@property
-	def media(self):
-		return vendor('multiselect.js', 'multiselect.css', 'xadmin.widget.multiselect.js')
-
-	def render(self, name, value, attrs=None, choices=(), **kwargs):
-		if attrs is None:
-			attrs = {}
-		attrs['class'] = 'selectmultiple selectdropdown'
-		return super(SelectMultipleDropdown, self).render(name, value, attrs, choices)
-
-
 class M2MSelectPlugin(BaseAdminPlugin):
+	"""Swaps the widget of m2m fields declared with the ``m2m_transfer`` style.
+
+	It used to serve a second style, ``m2m_dropdown``, backed by the
+	``bootstrap-multiselect`` vendor. No admin ever declared it, so the vendor was
+	shipped for nobody; style, widget and vendor were dropped together (#7566).
+	Reinstating it means bringing the vendor back -- prefer ``m2m_transfer``, or
+	the selectize path the host project already loads.
+	"""
 
 	def init_request(self, *args, **kwargs):
-		return hasattr(self.admin_view, 'style_fields') and \
-		       (
-				       'm2m_transfer' in self.admin_view.style_fields.values() or
-				       'm2m_dropdown' in self.admin_view.style_fields.values()
-		       )
+		return (hasattr(self.admin_view, 'style_fields') and
+		        'm2m_transfer' in self.admin_view.style_fields.values())
 
 	def get_field_style(self, attrs, db_field, style, **kwargs):
 		if style == 'm2m_transfer' and isinstance(db_field, ManyToManyField):
 			return {'widget': SelectMultipleTransfer(verbose_name=db_field.verbose_name,
 			                                         is_stacked=False), 'help_text': ''}
-		if style == 'm2m_dropdown' and isinstance(db_field, ManyToManyField):
-			return {'widget': SelectMultipleDropdown, 'help_text': ''}
 		return attrs
 
 

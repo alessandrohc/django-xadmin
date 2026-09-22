@@ -122,7 +122,10 @@ def xstatic(*tags):
 				mode = 'dev'
 			files = node[mode]
 
-		files = type(files) in (list, tuple) and files or [files, ]
+		# a host project may empty a list (its theme ships the stylesheet): keep it empty,
+		# do not wrap it -- `[] or [files]` used to become `[[]]` and blow up on `%` below
+		if not isinstance(files, (list, tuple)):
+			files = [files]
 		fs.extend([f % {'lang': lang_locale} for f in files])
 
 	return [f.startswith('http://') and f or static(f) for f in fs]

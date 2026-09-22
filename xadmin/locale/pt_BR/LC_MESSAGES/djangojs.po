@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# 
+#
 # Translators:
 # korndorfer <codigo.aberto@dorfer.com.br>, 2013
 msgid ""
 msgstr ""
 "Project-Id-Version: xadmin-core\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2022-09-05 18:27-0300\n"
+"POT-Creation-Date: 2026-09-21 14:34+0000\n"
 "PO-Revision-Date: 2013-11-20 12:41+0000\n"
 "Last-Translator: korndorfer <codigo.aberto@dorfer.com.br>\n"
 "Language-Team: Portuguese (Brazil) (http://www.transifex.com/projects/p/"
@@ -19,11 +19,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
+#: xadmin/static/xadmin/js/xadmin.bs.modal.js:30
+msgid "Failed to load data."
+msgstr "Falha ao carregar os dados."
+
 #: xadmin/static/xadmin/js/xadmin.page.dashboard.js:15
 msgid "Save changes"
 msgstr "Salvar alterações"
 
-#: xadmin/static/xadmin/js/xadmin.plugin.actions.js:11
+#: xadmin/static/xadmin/js/xadmin.plugin.actions.js:12
 msgid "%(sel)s of %(cnt)s selected"
 msgid_plural "%(sel)s of %(cnt)s selected"
 msgstr[0] "%(sel)s de %(cnt)s selecionado"
@@ -33,11 +37,11 @@ msgstr[1] "%(sel)s de %(cnt)s selecionados"
 msgid "Edit"
 msgstr "Editar"
 
-#: xadmin/static/xadmin/js/xadmin.plugin.quick-form.js:236
+#: xadmin/static/xadmin/js/xadmin.plugin.quick-form.js:239
 msgid "Add"
 msgstr "Adicionar"
 
-#: xadmin/static/xadmin/js/xadmin.plugin.quick-form.js:236
+#: xadmin/static/xadmin/js/xadmin.plugin.quick-form.js:239
 msgid "Change"
 msgstr "Alterar"
 
@@ -48,6 +52,20 @@ msgstr "Novo Item"
 #: xadmin/static/xadmin/js/xadmin.plugin.themes.js:12
 msgid "Loading theme"
 msgstr "Carregando tema"
+
+#: xadmin/static/xadmin/js/xadmin.selectize.state_messages.js:66
+msgid "Searching…"
+msgstr "Buscando…"
+
+#: xadmin/static/xadmin/js/xadmin.selectize.state_messages.js:69
+msgid "No results found"
+msgstr "Nenhum resultado encontrado"
+
+#: xadmin/static/xadmin/js/xadmin.selectize.state_messages.js:73
+msgid "Type at least %(count)s character"
+msgid_plural "Type at least %(count)s characters"
+msgstr[0] "Digite pelo menos %(count)s caractere"
+msgstr[1] "Digite pelo menos %(count)s caracteres"
 
 #: xadmin/static/xadmin/js/xadmin.widget.datetime.js:32
 msgid "Sunday Monday Tuesday Wednesday Thursday Friday Saturday Sunday"

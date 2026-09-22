@@ -44,8 +44,7 @@
     height: 50px;
 }
 
-.editable form select, 
-.editable form .select2-container {
+.editable form select {
   max-width: 200px;
   min-width: 100px;
   width: 100%;
