@@ -4,6 +4,7 @@ from django import forms
 from django.core.exceptions import PermissionDenied, ImproperlyConfigured
 from django.db import models
 from django.forms.models import modelform_factory
+from django.forms.utils import ErrorList
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str
 from django.utils.safestring import mark_safe
@@ -164,6 +165,19 @@ class BatchChangeAction(BaseActionView):
 				del form.fields[field_name]
 		return form
 
+	@filter_hook
+	def get_error_list(self):
+		"""Errors of the bound batch form, shaped like ModelFormAdminView.get_error_list.
+
+		Without them in the context an invalid POST re-renders the form with no visible
+		message: the template alert is gated on ``errors``, and the field feedback that
+		crispy writes is hidden by Bootstrap next to the ChangeFieldWidgetWrapper markup.
+		"""
+		errors = ErrorList()
+		if self.form_obj.is_bound:
+			errors.extend(self.form_obj.errors.values())
+		return errors
+
 	def do_action(self, queryset):
 		if not self.has_change_permission():
 			raise PermissionDenied
@@ -203,6 +217,7 @@ class BatchChangeAction(BaseActionView):
 			"title": _("Batch change %s") % objects_name,
 			'objects_name': objects_name,
 			'form': self.form_obj,
+			'errors': self.get_error_list(),
 			'queryset': queryset,
 			'count': count,
 			"opts": self.opts,

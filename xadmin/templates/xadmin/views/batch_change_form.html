@@ -28,6 +28,10 @@
       <div class="alert alert-danger alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
       {% blocktrans count counter=errors|length %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+        {# every field error, with its label: the feedback next to the field can be hidden by the field markup #}
+        {% for field in form %}{% for error in field.errors %}
+        <div class="mt-1"><strong>{{ field.label }}</strong>: {{ error }}</div>
+        {% endfor %}{% endfor %}
       </div>
       {{ form.non_field_errors }}
   {% endif %}
