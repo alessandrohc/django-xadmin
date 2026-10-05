@@ -318,6 +318,14 @@
             // the options the server rendered (the whole queryset, for the POST to validate) go
             // before the parent's come in
             instance.clearOptions();
+            // The vendor's clearOptions keeps the option of the selected value with its old $order,
+            // and registerOption ignores a value that already exists: on the first load of a change
+            // form the saved value sorted first, ahead of the list. When the list brings that value
+            // back, the survivor is dropped and comes in at the list position; setValue below puts
+            // the selection back. A value outside the list (a legacy city) still survives, selected.
+            if (keep && items.some(function (item) { return String(item.id) === keep; })) {
+                instance.removeOption(keep, true);
+            }
             callback(items);
             if (keep) {
                 if (instance.options[keep]) {

@@ -84,6 +84,17 @@ class WidgetSelectJsTests(SimpleTestCase):
         self.assertTrue("toggleClass('d-none', items.length === 0)" not in self.source,
                         msg='measuring after the empty label went in never hides')
 
+    def test_a_kept_value_present_in_the_fresh_list_takes_the_list_position(self):
+        # the vendor's clearOptions keeps the selected option with its old $order, so on the
+        # first load of a change form the saved value sorted first; when the parent's list
+        # brings that value back, the survivor is dropped and re-added in list order
+        self.assertTrue("removeOption(keep, true)" in self.source,
+                        msg='the surviving option keeps its old $order and sorts first; drop it when the list brings it back')
+        self.assertEqual(self.source.count('callback(items);'), 1,
+                         msg='deliver() is the only place the dependent branch hands items to the vendor')
+        self.assertTrue(self.source.index('removeOption(keep, true)') < self.source.index('callback(items);'),
+                        msg='the survivor must go before the callback adds the list')
+
     def test_get_forms_join_multiple_values_for_the_in_lookup(self):
         self.assertTrue('formdata' in self.source,
                         msg='changelist filter forms submit __in=1,2; xadmin keeps the last GET value otherwise')
