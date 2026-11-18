@@ -11,7 +11,7 @@ from django.contrib.auth.forms import (
 from django.contrib.auth.models import Group, Permission
 from django.core.exceptions import PermissionDenied
 from django.forms import ModelMultipleChoiceField
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
@@ -206,11 +206,18 @@ class ChangePasswordView(ModelAdminView):
 	def form_invalid(self, form):
 		return self.get_response()
 
+	def _raise_if_missing(self, object_id):
+		# mesma ordem das outras views de objeto (views/delete.py, views/edit.py): permissão, depois 404
+		if self.obj is None:
+			raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {
+				'name': smart_str(self.opts.verbose_name), 'key': escape(object_id)})
+
 	@csrf_protect_m
 	def get(self, request, object_id):
 		self.obj = self.get_object(unquote(object_id))
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 		self.form = self.get_form(self.obj)
 		return self.get_response()
 
@@ -220,6 +227,7 @@ class ChangePasswordView(ModelAdminView):
 		self.obj = self.get_object(unquote(object_id))
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 		return self.post_response()
 
 	def get_media(self):

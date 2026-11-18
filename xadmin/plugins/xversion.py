@@ -19,10 +19,11 @@ from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
+from django.utils.html import escape
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
@@ -427,12 +428,19 @@ class RevisionListView(BaseReversionView):
 		})
 		return context
 
+	def _raise_if_missing(self, object_id):
+		# mesma ordem das outras views de objeto (views/delete.py, views/edit.py): permissão, depois 404
+		if self.obj is None:
+			raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {
+				'name': force_str(self.opts.verbose_name), 'key': escape(object_id)})
+
 	def get(self, request, object_id, *args, **kwargs):
 		object_id = unquote(object_id)
 		self.obj = self.get_object(object_id)
 
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 
 		return self.get_response()
 
@@ -613,6 +621,7 @@ class RevisionListView(BaseReversionView):
 
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 
 		params = self.request.POST
 		if 'version_a' not in params or 'version_b' not in params:
