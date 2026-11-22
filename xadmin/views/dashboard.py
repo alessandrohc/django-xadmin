@@ -14,9 +14,8 @@ from django.template.loader import render_to_string
 from django.urls.base import reverse, NoReverseMatch
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str, smart_str
-from django.utils.html import escape
+from django.utils.html import escape, format_html, format_html_join
 from urllib.parse import urlencode
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.cache import never_cache
 
@@ -41,14 +40,14 @@ class WidgetTypeSelect(forms.Widget):
 			value = ''
 		final_attrs = self.build_attrs(attrs, extra_attrs={'name': name})
 		final_attrs['class'] = 'nav nav-pills flex-column'
-		output = ['<ul%s>' % flatatt(final_attrs)]
 		options = self.render_options(force_str(value), final_attrs['id'])
+		# o valor volta de um envio recusado (POST) ou da query string (GET): o format_html escapa
+		# o id, o name e o valor, e o HTML todo é montado de pedaços já seguros, sem mark_safe (#8989)
+		hidden = format_html('<input type="hidden" id="{}_input" name="{}" value="{}"/>',
+		                     final_attrs['id'], name, force_str(value))
 		if options:
-			output.append(options)
-		output.append('</ul>')
-		output.append('<input type="hidden" id="%s_input" name="%s" value="%s"/>' %
-		              (final_attrs['id'], name, force_str(value)))
-		return mark_safe('\n'.join(output))
+			return format_html('<ul{}>\n{}\n</ul>\n{}', flatatt(final_attrs), options, hidden)
+		return format_html('<ul{}>\n</ul>\n{}', flatatt(final_attrs), hidden)
 
 	def render_option(self, selected_choice, widget, id):
 		is_active = widget.widget_type == selected_choice
@@ -62,11 +61,10 @@ class WidgetTypeSelect(forms.Widget):
 		})
 
 	def render_options(self, selected_choice, id):
-		# Normalize to strings.
-		output = []
-		for widget in self._widgets:
-			output.append(self.render_option(selected_choice, widget, id))
-		return '\n'.join(output)
+		# cada opção já é texto seguro (render_to_string do template com autoescape): o
+		# format_html_join as junta sem escapar de novo e devolve texto seguro
+		return format_html_join('\n', '{}', (
+			(self.render_option(selected_choice, widget, id),) for widget in self._widgets))
 
 
 class UserWidgetAdmin:
