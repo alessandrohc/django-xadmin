@@ -5,7 +5,7 @@ import logging
 from django.contrib.admin import utils as admin_utils
 from django.conf import settings
 from django.contrib.admin.widgets import url_params_from_lookup_dict
-from django.db import models, router, ProgrammingError
+from django.db import connections, models, router, ProgrammingError
 from django.db.models.fields.related import ForeignObjectRel
 from django.db.models.sql.query import LOOKUP_SEP
 from django.forms.utils import flatatt
@@ -20,7 +20,7 @@ from django.utils.text import capfirst
 from django.utils.translation import get_language, to_locale
 from django.utils.translation import ngettext
 from django.templatetags.static import static
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 import json
 
 
@@ -561,6 +561,51 @@ def is_related_remote_field(field):
 
 def is_related_field2(field):
 	return is_related_remote_field(field) or is_related_field(field)
+
+
+def parse_pk(model, value):
+	"""Convert ``value`` with the primary key field of ``model``, as the ORM would.
+
+	For an id a view reads out of ``request.POST`` without a form (#8930). The ORM converts
+	the same way, but a value the key field does not accept comes out of the query as a
+	``ValueError`` and the request ends in a 500; here the view gets a ``ValueError`` it can
+	turn into a 400 before anything is read or saved. The field decides what is valid, so
+	``' 5'`` and ``'1_0'`` are numbers for an integer key and a UUID key accepts only a UUID.
+	The conversion does not check the range of the database column: see ``pk_range``.
+	"""
+	try:
+		return model._meta.pk.to_python(value)
+	except (ValidationError, TypeError, OverflowError):
+		raise ValueError(value) from None
+
+
+def pk_range(model):
+	"""The ``(low, high)`` an integer primary key of ``model`` can hold in the database it is read from.
+
+	``None`` when the key has no range to check: a UUID or text key, or a type the backend
+	does not list. A table inheritance key (a ``OneToOneField`` to the parent) is checked as
+	the field it points to. Compute it once per request and pass it to ``pk_fits``: the
+	``in`` lookup does not check the range, and SQLite raises ``OverflowError`` (a 500) for a
+	number above 2**63 - 1, so a view that filters with ``pk__in`` must drop such a number
+	first. It is an id no object has (#8930).
+	"""
+	field = model._meta.pk
+	while field.is_relation:
+		field = field.target_field
+	if not isinstance(field, models.IntegerField):
+		return None
+	try:
+		return connections[router.db_for_read(model)].ops.integer_field_range(field.get_internal_type())
+	except KeyError:
+		return None
+
+
+def pk_fits(value, range_):
+	"""Whether the converted ``value`` fits in ``range_``, as ``pk_range`` returns it (``None`` fits any)."""
+	if range_ is None:
+		return True
+	low, high = range_
+	return (low is None or value >= low) and (high is None or value <= high)
 
 
 class HtmlFlatData:

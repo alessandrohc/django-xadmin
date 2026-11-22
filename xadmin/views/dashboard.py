@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.db.models.base import ModelBase
 from django.forms.forms import DeclarativeFieldsMetaclass
 from django.forms.utils import flatatt
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.template import loader
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -24,7 +24,7 @@ from xadmin import widgets as exwidgets
 from crispy_forms.helper import FormHelper
 from xadmin.models import UserSettings, UserWidget
 from xadmin.sites import site
-from xadmin.util import unquote
+from xadmin.util import parse_pk, unquote
 from xadmin.views.base import CommAdminView, ModelAdminView, filter_hook, csrf_protect_m
 from xadmin.views.edit import CreateAdminView
 from xadmin.views.list import ListAdminView
@@ -645,8 +645,17 @@ class Dashboard(CommAdminView):
 	def post(self, request, *args, **kwargs):
 		if 'id' in request.POST:
 			widget_id = request.POST['id']
+			# The id comes straight from the POST (#8930): a value the key field of the widget
+			# does not convert is a 400, on save and on delete, before anything is read or changed.
+			try:
+				parse_pk(UserWidget, widget_id)
+			except ValueError:
+				return HttpResponseBadRequest()
 			if request.POST.get('_delete', None) != 'on':
 				widget = self.get_widget(widget_id, request.POST.copy())
+				if widget is None:
+					# not a widget of this user on this page: unknown, or somebody else's
+					raise Http404
 				widget.save()
 			else:
 				try:

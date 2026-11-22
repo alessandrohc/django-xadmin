@@ -19,7 +19,7 @@ from django.core.exceptions import PermissionDenied, FieldDoesNotExist
 from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
-from django.http import Http404, HttpResponseRedirect
+from django.http import Http404, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
@@ -37,7 +37,8 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.plugins.inline import InlineModelAdmin
 from xadmin.plugins.utils import OrderedDefaultDict
 from xadmin.sites import site, AdminPath
-from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts
+from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts, \
+	parse_pk
 from xadmin.views import BaseAdminPlugin, ModelAdminView, CreateAdminView, UpdateAdminView, DetailAdminView, \
 	ModelFormAdminView, DeleteAdminView, ListAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
@@ -634,6 +635,14 @@ class RevisionListView(BaseReversionView):
 		if version_a_id == version_b_id:
 			self.message_user(_("Please select two different versions."), 'error')
 			return self.get_response()
+
+		# The ids come straight from the POST (#8930): one the key field of Version does not
+		# convert is a 400; one it converts but no version owns is the 404 below.
+		try:
+			parse_pk(Version, version_a_id)
+			parse_pk(Version, version_b_id)
+		except ValueError:
+			return HttpResponseBadRequest()
 
 		version_a = get_object_or_404(Version, pk=version_a_id)
 		version_b = get_object_or_404(Version, pk=version_b_id)

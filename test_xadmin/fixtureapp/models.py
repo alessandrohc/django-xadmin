@@ -1,5 +1,7 @@
 # coding=utf-8
 """Two models with a plain FK, so an inline admin has a reverse relation to walk."""
+import uuid
+
 from django.db import models
 
 
@@ -39,6 +41,34 @@ class DummyModel(models.Model):
     have something to log without dragging the admin registration of Author into it.
     """
     name = models.CharField(max_length=64)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
+
+
+class Ranked(models.Model):
+    """Integer key with an order column: what the ``save-order`` route and the batch action need (#8930).
+
+    ``RankedAdmin.list_order_field`` turns the sortable list on; the ``mark_seen`` action
+    renames the selected rows, so a test can tell whether the action ran and on which rows.
+    """
+    name = models.CharField(max_length=100)
+    position = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
+
+
+class Tag(models.Model):
+    """UUID key: the batch action must keep accepting a valid UUID selection (#8930)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
 
     class Meta:
         app_label = 'xadmin_fixture'

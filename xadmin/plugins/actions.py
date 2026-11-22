@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from django import forms
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.template import loader
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str
@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _, gettext_lazy as _lazy, ngette
 
 from xadmin.plugins.utils import get_context_dict
 from xadmin.sites import site
-from xadmin.util import get_deleted_objects
+from xadmin.util import get_deleted_objects, parse_pk, pk_fits, pk_range
 from xadmin.util import model_format_dict, model_ngettext
 from xadmin.views import BaseAdminPlugin, ListAdminView
 from xadmin.views.base import filter_hook, ModelAdminView
@@ -210,8 +210,19 @@ class ActionPlugin(BaseAdminPlugin):
 				else:
 					queryset = av.list_queryset._clone()
 					if not select_across:
+						# The ids come straight from the POST (#8930): convert them with the key field
+						# of the model, as the ORM would, but answer 400 for one it does not accept
+						# instead of letting the ValueError end in a 500. Nothing has run yet.
+						try:
+							pks = [parse_pk(av.model, pk) for pk in selected]
+						except ValueError:
+							return HttpResponseBadRequest()
+						# The `in` lookup does not check the column range and SQLite overflows (500):
+						# a number the column cannot hold is an id no object has, like any other.
+						limits = pk_range(av.model)
+						pks = [pk for pk in pks if pk_fits(pk, limits)]
 						# Perform the action only on the selected objects
-						queryset = av.list_queryset.filter(pk__in=selected)
+						queryset = av.list_queryset.filter(pk__in=pks)
 					response = self.response_action(ac, queryset)
 					# Actions may return an HttpResponse, which will be used as the
 					# response from the POST. If not, we'll be a good little HTTP
