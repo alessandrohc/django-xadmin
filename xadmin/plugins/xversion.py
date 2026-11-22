@@ -644,8 +644,14 @@ class RevisionListView(BaseReversionView):
 		except ValueError:
 			return HttpResponseBadRequest()
 
-		version_a = get_object_or_404(Version, pk=version_a_id)
-		version_b = get_object_or_404(Version, pk=version_b_id)
+		# só as versões do objeto da rota (#8988): a de outro objeto, ou de outro modelo, é 404, como a que
+		# ninguém tem; o modelo sem histórico no reversion levanta RegistrationError aqui e não tem versão de ninguém
+		try:
+			versions = Version.objects.get_for_object(self.obj)
+		except RegistrationError:
+			raise Http404
+		version_a = get_object_or_404(versions, pk=version_a_id)
+		version_b = get_object_or_404(versions, pk=version_b_id)
 
 		obj_a, detail_a = self.get_version_object(version_a)
 		obj_b, detail_b = self.get_version_object(version_b)
