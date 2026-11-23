@@ -56,7 +56,8 @@ static = register.simple_tag(static)
 
 @register.filter
 def xslugify(value):
-	return re.sub(r'\W+', "_", value, re.I)
+	# sem flag: o re.I ia como count e so trocava as 2 primeiras sequencias (#9000); \W nao tem letras
+	return re.sub(r'\W+', "_", value)
 
 
 @register.simple_tag(takes_context=True)
