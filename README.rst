@@ -23,7 +23,6 @@ Features
 -  Better filter, date range, number range, etc.
 -  Built-in data export with xls, csv, xml and json format
 -  Dashboard page with widget support
--  In-site bookmarking
 -  Full CRUD methods
 
 Screenshots
@@ -35,14 +34,8 @@ Screenshots
 .. figure:: https://raw.github.com/sshwsfc/django-xadmin/docs-chinese/docs/images/plugins/filter.png
    :alt: Filter
 
-.. figure:: https://raw.github.com/sshwsfc/django-xadmin/docs-chinese/docs/images/plugins/chart.png
-   :alt: Chart
-
 .. figure:: https://raw.github.com/sshwsfc/django-xadmin/docs-chinese/docs/images/plugins/export.png
    :alt: Export Data
-
-.. figure:: https://raw.github.com/sshwsfc/django-xadmin/docs-chinese/docs/images/plugins/editable.png
-   :alt: Edit inline
 
 Get Started
 -----------
@@ -133,17 +126,6 @@ Online Group
 ------------
 
 -  QQ群 : 282936295
-
-Run Demo Locally
-----------------
-
-.. code:: bash
-
-    cd demo_app
-    ./manage.py migrate
-    ./manage.py runserver
-
-Open http://127.0.0.1:8000 in your browser, the admin user password is ``admin``
 
 Help
 ----

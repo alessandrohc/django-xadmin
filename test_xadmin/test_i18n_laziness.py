@@ -110,14 +110,6 @@ class NoFrozenTranslationsTests(SimpleTestCase):
 class LazyChromeTests(SimpleTestCase):
     """The strings this ticket unfroze, asserted as behaviour rather than source."""
 
-    def test_aggregate_titles_are_lazy(self):
-        from xadmin.plugins.aggregation import AGGREGATE_TITLE
-        for key, value in AGGREGATE_TITLE.items():
-            with self.subTest(aggregate=key):
-                self.assertIsInstance(
-                    value, Promise,
-                    msg='AGGREGATE_TITLE[{0!r}] froze at import'.format(key))
-
     def test_action_names_are_lazy(self):
         from xadmin.plugins.auth import ACTION_NAME
         for key, value in ACTION_NAME.items():
@@ -127,9 +119,8 @@ class LazyChromeTests(SimpleTestCase):
     def test_empty_changelist_value_is_deliberately_eager(self):
         """The one piece of chrome that must NOT be lazy, pinned so it stays that way.
 
-        plus_base's ResultJsonField does `isinstance(self.text, str)` on this value and
-        plugins/editable.py assigns it straight into that `text`; a proxy fails the
-        isinstance and silently changes which branch runs. It is also defined twice --
+        plus_base's ResultJsonField does `isinstance(self.text, str)` on this value; a
+        proxy fails the isinstance and silently changes which branch runs. It is also defined twice --
         views/list.py and views/detail.py -- so the two have to agree, or the type
         depends on which module the consumer happened to import.
         """
@@ -159,7 +150,7 @@ class LazyChromeTests(SimpleTestCase):
         supports % formatting and str() -- which is what templates and the admin
         chrome do with these -- and that is what is asserted, rather than assuming.
         """
-        from xadmin.plugins.aggregation import AGGREGATE_TITLE
-        value = AGGREGATE_TITLE['min']
+        from xadmin.plugins.auth import ACTION_NAME
+        value = ACTION_NAME['add']
         self.assertIsInstance(str(value), str)
         self.assertTrue(str(value), msg='the lazy string must render to something')

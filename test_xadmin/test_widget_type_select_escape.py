@@ -11,7 +11,7 @@ portas (medidas no planejamento do #8989): o assistente de adicionar (GET com
 escape nele (unit, universal sobre o texto) e os testes de formulário provam as portas medidas.
 
 Os ACs de regressão (``SHALL CONTINUE TO``) passam no código de antes e ficam como controle:
-o assistente avança com os seis tipos, a lista e o campo oculto saem iguais (byte a byte, contra o
+o assistente avança com os quatro tipos, a lista e o campo oculto saem iguais (byte a byte, contra o
 HTML do commit-base ``6b5de876``), quem não tem acesso não recebe o formulário nem o valor, e um
 tipo que não existe segue recusado.
 
@@ -40,8 +40,9 @@ AJAX = {'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'}
 # conhece, e o plugin copia o valor sob a chave que o `_field` nomeia, qualquer que seja o prefixo
 QUICK_KEY = 'quickform-xadmin-userwidget-00000-widget_type'
 
-# os seis tipos registrados para a página `home` (medido: todos avançam o assistente)
-SIX_TYPES = ('html', 'qbutton', 'list', 'addform', 'bookmark', 'chart')
+# os quatro tipos que o pacote mantém na página `home` (medido: todos avançam o assistente); `bookmark` e `chart`
+# saíram com os módulos deles no #9054, e o filtro de `_selector` mantém o HTML fixo enquanto eles ainda existirem
+FOUR_TYPES = ('html', 'qbutton', 'list', 'addform')
 FIVE_CHARS = ('"', "'", '<', '>', '&')
 SCRIPT_PAYLOAD = '"><script>alert(1)</script>'
 ATTRIBUTE_PAYLOAD = '" onfocus="alert(1)" autofocus="'
@@ -59,7 +60,7 @@ RAW_MARKERS = (SCRIPT_PAYLOAD, ATTRIBUTE_PAYLOAD, '<b>x</b>', "x' onmouseover='a
 # Um dos cinco caracteres junto de caractere de controle (AC-8989-2): o atributo não pode fechar.
 MIXED = ('"\nonfocus="alert(1)"', '<\rx', "'\ty", '"\r\n><script>alert(1)</script>')
 
-# O HTML do `render` no commit-base `6b5de876` (idioma `en`, os seis tipos da página `home`, `name`
+# O HTML do `render` no commit-base `6b5de876` (idioma `en`, os quatro tipos da página `home`, sem os dois de `bookmark` e `chart`, `name`
 # `widget_type`, `id` `id_widget_type`, valor vazio). Os outros valores se derivam dele: o tipo
 # escolhido ganha `nav-link  active` e o campo oculto leva o valor (conferido contra o commit-base
 # para todos os oito valores usados abaixo).
@@ -136,42 +137,6 @@ BASE_EMPTY = """<ul class="nav nav-pills flex-column" id="id_widget_type" name="
         })
     });
 </script>
-
-<li class="nav-item">
-    <a class="nav-link " id="nav_item_id_widget_type_bookmark">
-        <h4><i class="fa fa-bookmark mr-1"></i>bookmark</h4>
-        <span class="text-dark">Bookmark Widget, can show user&#x27;s bookmark list data in widget.</span>
-    </a>
-</li>
-<script type="application/javascript">
-    $(function() {
-        var $link = $("#nav_item_id_widget_type_bookmark");
-        $link.click(function () {
-            $link.parent().parent().find('a')
-                .removeClass("active");
-            $link.addClass("active");
-            $("#id_widget_type_input").attr("value", "bookmark");
-        })
-    });
-</script>
-
-<li class="nav-item">
-    <a class="nav-link " id="nav_item_id_widget_type_chart">
-        <h4><i class="fa fa-chart-bar mr-1"></i>chart</h4>
-        <span class="text-dark">Show models simple chart.</span>
-    </a>
-</li>
-<script type="application/javascript">
-    $(function() {
-        var $link = $("#nav_item_id_widget_type_chart");
-        $link.click(function () {
-            $link.parent().parent().find('a')
-                .removeClass("active");
-            $link.addClass("active");
-            $("#id_widget_type_input").attr("value", "chart");
-        })
-    });
-</script>
 </ul>
 <input type="hidden" id="id_widget_type_input" name="widget_type" value=""/>"""
 
@@ -245,10 +210,10 @@ def _staff(username, *codenames):
 
 
 def _selector():
-    """O seletor com os seis tipos da página `home`, na ordem do registro (os outros testes da suíte
+    """O seletor com os quatro tipos da página `home`, na ordem do registro (os outros testes da suíte
     podem registrar mais tipos: o filtro mantém o HTML fixo)."""
-    widgets = [w for w in widget_manager.get_widgets('home') if w.widget_type in SIX_TYPES]
-    widgets.sort(key=lambda w: SIX_TYPES.index(w.widget_type))
+    widgets = [w for w in widget_manager.get_widgets('home') if w.widget_type in FOUR_TYPES]
+    widgets.sort(key=lambda w: FOUR_TYPES.index(w.widget_type))
     return WidgetTypeSelect(widgets), widgets
 
 
@@ -262,7 +227,7 @@ class SelectorRenderTests(SimpleTestCase):
     def test_render_writes_name_id_and_value_as_text(self):
         """AC-8989-2: `name`, `id` e valor com um dos cinco caracteres (com ou sem controle) saem como texto."""
         selector, widgets = _selector()
-        self.assertEqual(len(widgets), 6, msg='fixture: the six widget types are registered')
+        self.assertEqual(len(widgets), 4, msg='fixture: the four widget types are registered')
         for text in VALUES + MIXED:
             for field in ('name', 'id', 'value'):
                 with self.subTest(field=field, text=text):
@@ -284,14 +249,14 @@ class SelectorRenderTests(SimpleTestCase):
     def test_render_marks_only_the_chosen_type_as_active(self):
         """AC-8989-4 (controle): a lista de tipos tem ativo só o tipo igual ao valor (nenhum para vazio ou texto que não é tipo)."""
         selector, widgets = _selector()
-        self.assertEqual(len(widgets), 6, msg='fixture: the six widget types are registered')
-        for value in ('',) + SIX_TYPES + ('abc',):
+        self.assertEqual(len(widgets), 4, msg='fixture: the four widget types are registered')
+        for value in ('',) + FOUR_TYPES + ('abc',):
             with self.subTest(value=value):
                 links = _elements(_render(selector, value=value)).links
-                self.assertEqual(len(links), 6, msg='the six types are listed')
+                self.assertEqual(len(links), 4, msg='the four types are listed')
                 active = [dict(attrs)['id'] for attrs in links
                           if 'active' in (dict(attrs).get('class') or '').split()]
-                expected = ['nav_item_id_widget_type_%s' % value] if value in SIX_TYPES else []
+                expected = ['nav_item_id_widget_type_%s' % value] if value in FOUR_TYPES else []
                 self.assertEqual(active, expected)
 
     def test_render_hidden_input_carries_the_id_name_and_value_received(self):
@@ -308,11 +273,11 @@ class SelectorRenderTests(SimpleTestCase):
         """AC-8989-4, AC-8989-8 (controle): sem caractere especial, a saída é a do commit-base `6b5de876`, byte a byte."""
         with translation.override('en'):
             selector, widgets = _selector()
-            self.assertEqual(len(widgets), 6, msg='fixture: the six widget types are registered')
-            for value in ('',) + SIX_TYPES + ('abc',):
+            self.assertEqual(len(widgets), 4, msg='fixture: the four widget types are registered')
+            for value in ('',) + FOUR_TYPES + ('abc',):
                 with self.subTest(value=value):
                     expected = BASE_EMPTY
-                    if value in SIX_TYPES:
+                    if value in FOUR_TYPES:
                         expected = expected.replace(
                             'class="nav-link " id="nav_item_id_widget_type_%s"' % value,
                             'class="nav-link  active" id="nav_item_id_widget_type_%s"' % value)
@@ -428,10 +393,10 @@ class SelectorFormTests(TestCase):
     # ---- AC-8989-3: o tipo válido avança o assistente --------------------------------------------
 
     def test_wizard_advances_with_the_value_the_hidden_input_carries(self):
-        """AC-8989-3 (controle): com cada um dos seis tipos, o valor que o campo oculto traz avança para a etapa dos parâmetros."""
+        """AC-8989-3 (controle): com cada um dos quatro tipos, o valor que o campo oculto traz avança para a etapa dos parâmetros."""
         registered = [w.widget_type for w in widget_manager.get_widgets('home')]
         client = self._client_for(self.root)
-        for widget_type in SIX_TYPES:
+        for widget_type in FOUR_TYPES:
             with self.subTest(widget_type=widget_type):
                 self.assertIn(widget_type, registered, msg='fixture: the type is registered')
                 page = client.get(ADD_URL, {'page_id': 'home', 'widget_type': widget_type})

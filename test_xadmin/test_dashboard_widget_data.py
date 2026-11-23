@@ -46,17 +46,15 @@ AUTHOR = 'xadmin_fixture.author'
 GONE_MODELS = ('nope.nope', 'xadmin_fixture.nonexistent')
 # existem no Django e não estão no site do xadmin: o `valid_value` do campo os recusa
 UNREGISTERED_MODELS = ('contenttypes.contenttype', 'xadmin_fixture.dummymodel')
-MODEL_TYPES = ('list', 'addform', 'chart')
+MODEL_TYPES = ('list', 'addform')
 # valores do campo de modelo que o campo recusa (além de ausente: o POST sem a chave)
 BAD_MODEL_VALUES = ('', 'zzz', 'a.b.c') + GONE_MODELS + UNREGISTERED_MODELS
 
-# os dados que o formulário do tipo recusa, por tipo de widget (AC-8987-1)
+# os dados que o formulário do tipo recusa, por tipo de widget (AC-9054-10)
 INVALID_DATA = {
     'qbutton': [{}, {'title': 'x'}, {'url': ''}, {'url': '   '}],
     'list': [{}] + [{'model': value} for value in BAD_MODEL_VALUES],
     'addform': [{}] + [{'model': value} for value in BAD_MODEL_VALUES],
-    'chart': [{}] + [{'model': value} for value in BAD_MODEL_VALUES],
-    'bookmark': [{'bookmark': '99999'}, {'bookmark': 'abc'}],
 }
 
 
@@ -131,11 +129,11 @@ class SaveInvalidDataTests(_ClientMixin, TestCase):
         cls.actors = (('root', cls.root), ('blind', cls.blind))
         cls.widgets = {}
         for name, user in cls.actors:
-            for widget_type in ('html', 'qbutton', 'list', 'addform', 'chart', 'bookmark'):
+            for widget_type in ('html', 'qbutton', 'list', 'addform'):
                 cls.widgets[(name, widget_type)] = _widget(user, widget_type, title='before')
 
     def test_invalid_data_on_an_own_widget_answers_400_with_no_body_and_saves_nothing(self):
-        """AC-8987-1: dados que o formulário do tipo recusa, no widget próprio, dão 400 sem corpo e não gravam nada."""
+        """AC-9054-10: dados que o formulário do tipo recusa, no widget próprio, dão 400 sem corpo e não gravam nada."""
         # controle positivo: o `html` próprio com dados válidos salva (o salvar e a conferência do banco funcionam)
         for name, user in self.actors:
             html = self.widgets[(name, 'html')]
@@ -169,12 +167,7 @@ class SaveInvalidDataTests(_ClientMixin, TestCase):
                 self.assertEqual((value['title'], value['model']), ('after', AUTHOR))
 
     def test_valid_quick_button_widget_of_the_superuser_keeps_being_saved(self):
-        """AC-8930-11 (controle): o salvar válido do botão rápido grava e responde o painel.
-
-        O widget de favoritos não entra: o `setup` dele não funciona com dado nenhum, nem com um favorito
-        válido (`xadmin/plugins/bookmark.py:206-207` passa o request ao construtor da view, e o Django 5.2
-        recusa: `TypeError`), então não é «um tipo de widget que o usuário pode usar» (follow-up F1).
-        """
+        """AC-8930-11 (controle): o salvar válido do botão rápido grava e responde o painel."""
         registered = {widget.widget_type for widget in widget_manager.get_widgets('home')}
         self.assertIn('qbutton', registered, msg='fixture: the type is registered on the home page')
         widget = self.widgets[('root', 'qbutton')]
@@ -246,7 +239,7 @@ class WizardParamsTests(_ClientMixin, TestCase):
         return field
 
     def test_params_step_with_an_invalid_model_shows_the_field_error_and_creates_no_widget(self):
-        """AC-8987-2: o passo de parâmetros com o modelo ausente, vazio ou não registrado volta com o erro no campo e não cria o widget."""
+        """AC-9054-11: o passo de parâmetros com o modelo ausente, vazio ou não registrado volta com o erro no campo e não cria o widget."""
         cases = 0
         for widget_type in MODEL_TYPES:
             for label, params in self.CASES:
@@ -266,7 +259,7 @@ class WizardParamsTests(_ClientMixin, TestCase):
         self.assertTrue(cases, msg='the loop must run')
 
     def test_params_step_with_a_registered_model_creates_the_widget(self):
-        """AC-8987-2 (controle): o passo de parâmetros com o modelo registrado cria o widget e volta ao painel."""
+        """AC-9054-11 (controle): o passo de parâmetros com o modelo registrado cria o widget e volta ao painel."""
         for widget_type in MODEL_TYPES:
             with self.subTest(widget_type=widget_type):
                 UserWidget.objects.all().delete()
@@ -288,7 +281,7 @@ class OpenDashboardTests(_ClientMixin, TestCase):
         cls.root = User.objects.create_superuser('wd-open-root', 'wd-open-root@example.com', 'not-a-real-password')
 
     def test_a_saved_widget_whose_model_no_longer_exists_is_dropped_and_deleted(self):
-        """AC-8987-4: o widget salvo cujo modelo deixou de existir some do painel e do banco, sem erro."""
+        """AC-9054-12, AC-9054-15: o widget salvo cujo modelo deixou de existir some do painel e do banco, sem erro."""
         cases = 0
         for widget_type in MODEL_TYPES:
             for model in GONE_MODELS:
@@ -304,8 +297,28 @@ class OpenDashboardTests(_ClientMixin, TestCase):
                     self.assertTrue(UserWidget.objects.filter(pk=control.pk).exists())
         self.assertTrue(cases, msg='the loop must run')
 
+    def test_a_saved_widget_of_a_type_the_package_does_not_bring_is_dropped_and_deleted(self):
+        """AC-9054-8, AC-9054-15: o widget salvo de tipo que o pacote não traz some do painel e do banco, sem erro."""
+        # `bookmark` e `chart` são os tipos dos módulos que saem do pacote; o terceiro é inventado e passa já no red
+        cases = (
+            ('bookmark', {'bookmark': '1'}),
+            ('chart', {'model': AUTHOR}),
+            ('zz-unknown-type', {}),
+        )
+        for widget_type, value in cases:
+            with self.subTest(widget_type=widget_type):
+                response, control, target = _open_dashboard(self, self.root, widget_type, value)
+                self.assertEqual(response.status_code, 200, msg='the dashboard opens without an error')
+                body = response.content.decode('utf-8')
+                self.assertIn('zz-control-title', body, msg='fixture: the control widget is on the page')
+                self.assertNotIn('zz-target-title', body, msg='the widget of a type the package lacks is not on the page')
+                self.assertFalse(UserWidget.objects.filter(pk=target.pk).exists(),
+                                 msg='the widget of a type the package lacks is deleted')
+                self.assertTrue(UserWidget.objects.filter(pk=control.pk).exists(),
+                                msg='only the widget of the unknown type is deleted')
+
     def test_a_saved_widget_with_any_other_invalid_data_stays_in_the_database(self):
-        """AC-8987-4: só o widget de modelo que sumiu é apagado: o salvo com outro dado inválido continua no banco."""
+        """AC-9054-15: só o widget de modelo que sumiu é apagado: o salvo com outro dado inválido continua no banco."""
         cases = (
             ('list', {'model': 'zzz'}),
             ('list', {}),
@@ -323,7 +336,7 @@ class OpenDashboardTests(_ClientMixin, TestCase):
                                 msg='a widget with other invalid data stays in the database')
 
     def test_a_saved_widget_with_a_registered_model_is_shown(self):
-        """AC-8987-4 (controle): o widget salvo com um modelo registrado aparece no painel e fica no banco."""
+        """AC-9054-12 (controle): o widget salvo com um modelo registrado aparece no painel e fica no banco."""
         response, control, target = _open_dashboard(self, self.root, 'list', {'model': AUTHOR})
         self.assertEqual(response.status_code, 200)
         body = response.content.decode('utf-8')
@@ -349,7 +362,7 @@ class ModelDashboardTests(_ClientMixin, TestCase):
                        for widget_type in ('html', 'qbutton', 'list')}
 
     def test_invalid_data_on_an_own_widget_answers_400_with_no_body_and_saves_nothing(self):
-        """AC-8987-1: no painel do objeto, dados que o tipo recusa dão 400 sem corpo e não gravam nada."""
+        """AC-9054-10: no painel do objeto, dados que o tipo recusa dão 400 sem corpo e não gravam nada."""
         html = self.widgets['html']
         response = self._client_for(self.root).post(self.url, {'id': html.pk, 'title': 'after', 'content': '<p>c</p>'})
         self.assertEqual(response.status_code, 200, msg='fixture: the model dashboard saves a valid html widget')
@@ -363,7 +376,7 @@ class ModelDashboardTests(_ClientMixin, TestCase):
                 self.assertEqual(_rows(), before, msg='nothing may be saved')
 
     def test_a_saved_widget_whose_model_no_longer_exists_is_dropped_and_deleted(self):
-        """AC-8987-4: no painel do objeto, o widget salvo de modelo que sumiu some do painel e do banco, sem erro."""
+        """AC-9054-12: no painel do objeto, o widget salvo de modelo que sumiu some do painel e do banco, sem erro."""
         response, control, target = _open_dashboard(
             self, self.root, 'list', {'model': GONE_MODELS[0]}, url=self.url, page_id=self.PAGE)
         self.assertEqual(response.status_code, 200, msg='the model dashboard opens without an error')

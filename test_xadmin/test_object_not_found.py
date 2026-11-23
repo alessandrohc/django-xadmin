@@ -5,7 +5,7 @@ Before #8560 both views took the ``None`` that ``get_object`` returns for an unk
 and used it: ``ChangePasswordView`` built ``AdminPasswordChangeForm(None)``
 (``AttributeError: 'NoneType' object has no attribute 'has_usable_password'``) and
 ``RevisionListView`` read ``self.obj.pk``. Every other object view of the package
-(update, delete, detail, editable, dashboard) checks the permission first and then raises
+(update, delete, detail, dashboard) checks the permission first and then raises
 ``Http404``. These tests pin the same order on the two views: 403 for whoever lacks the
 route's permission, whether or not the object exists, and 404 for whoever has it.
 

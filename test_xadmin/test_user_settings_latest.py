@@ -10,14 +10,13 @@ which fails the fixture while the table has the constraint.
 
 The #8983 made every reader of ``UserSettings`` tolerate a key with more than one row (the greatest id wins). What this
 module also pins is what must stay as it was, at every point the #8983 touched: the behaviour with one row or none
-(AC-8982-10), the first opening of the
+(AC-9054-13), the first opening of the
 panel and the new widget (AC-8982-11), the delete of a widget (AC-8982-12), and that a row of another user, or of
-another key of the same user, is never read nor changed (AC-8982-13). A row of an intruder is created *after* the
+another key of the same user, is never read nor changed (AC-9054-14). A row of an intruder is created *after* the
 user's own ones (a greater id) because, being the greatest id, it would win if the reader dropped the user or the key.
 
-The theme and the layout are read by plugins that only exist when the package runs alone (the host excludes
-``themes`` and ``portal`` in ``XADMIN_EXCLUDE_PLUGINS``), so they are called directly, as plugins, with a
-stand-in view; the panel, the widget screen and the delete go through the test client. The client is built
+The theme is read by a plugin the host excludes (``themes`` in ``XADMIN_EXCLUDE_PLUGINS``), so it is called
+directly, as a plugin, with a stand-in view; the panel, the widget screen and the delete go through the test client. The client is built
 with ``raise_request_exception=False`` so a 500 shows up as a status. The attribute ``client`` of the
 ``TestCase`` is left alone: the user's client is built per call.
 
@@ -29,23 +28,15 @@ with ``raise_request_exception=False`` so a 500 shows up as a status. The attrib
 import json
 from types import SimpleNamespace
 
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
 
-from xadmin.layout import Column, Fieldset
 from xadmin.models import UserSettings, UserWidget
-from xadmin.plugins.portal import ModelDetailPlugin, ModelFormPlugin
 from xadmin.plugins.themes import ThemePlugin
-
-from test_xadmin.fixtureapp.models import Author
 
 POS_KEY = 'dashboard:home:pos'
 THEME_KEY = 'site-theme'
-EDIT_KEY = 'xadmin_fixture_author_editform_portal'
-DETAIL_KEY = 'xadmin_fixture_author_detail_portal'
 UNRELATED_KEY = 'unrelated-setting'
 
 PANEL_URL = '/xadmin/'
@@ -119,24 +110,6 @@ class _SettingsTestCase(TestCase):
             self.assertEqual(plugin._get_theme(), plugin.default_theme,
                              msg='with no row and no cookie the default theme must apply')
 
-    def _layout_point(self, n, intruders, detail):
-        self._fresh()
-        key = DETAIL_KEY if detail else EDIT_KEY
-        self._rows(key, {0: [], 1: ['box-1,box-0|']}[n])
-        extra = self._intruders(key, 'box-0|box-1') if intruders else []
-        helper = FormHelper()
-        helper.layout = Layout(
-            Column(Fieldset('A', 'name', css_id='box-0'), Fieldset('B', css_id='box-1'), css_id='column-0'),
-            Column(css_id='column-1'))
-        view = SimpleNamespace(admin_site=None, request=SimpleNamespace(COOKIES={}), user=self.owner,
-                               args=(), kwargs={}, model=Author)
-        plugin = (ModelDetailPlugin if detail else ModelFormPlugin)(view)
-        got = [[field.css_id for field in column.fields] for column in plugin.get_form_helper(helper).layout.fields]
-        self.assertNotEqual(got, [['box-0'], ['box-1']], msg='the layout must not come from another user or key')
-        expected = {0: [['box-0', 'box-1'], []], 1: [['box-1', 'box-0'], []]}[n]
-        self.assertEqual(got, expected, msg=f'layout ({key}) with {n} row(s)')
-        self._assert_untouched(extra, 'box-0|box-1', 'layout')
-
     def _panel_read_point(self, n, intruders):
         self._fresh()
         widget_a, widget_b = self._widget('TITLEAAA'), self._widget('TITLEBBB')
@@ -187,8 +160,6 @@ class _SettingsTestCase(TestCase):
         """``{name: callable(n, intruders)}`` for the readers the criteria list."""
         return {
             'theme': self._theme_point,
-            'edit layout': lambda n, i: self._layout_point(n, i, detail=False),
-            'detail layout': lambda n, i: self._layout_point(n, i, detail=True),
             'panel page': self._panel_read_point,
         }
 
@@ -203,10 +174,10 @@ class _SettingsTestCase(TestCase):
 
 
 class OneRowOrNoneTests(_SettingsTestCase):
-    """AC-8982-10, AC-8982-11, AC-8982-12: nothing changes with one row or none."""
+    """AC-9054-13, AC-8982-11, AC-8982-12: nothing changes with one row or none."""
 
     def test_zero_or_one_row_reads_as_before(self):
-        """AC-8982-10: with one row the theme, the layouts and the panel use its value; with none, the fallback."""
+        """AC-9054-13: with one row the theme and the panel use its value; with none, the fallback."""
         points = self._read_points()
         self.assertTrue(points)
         for name, point in points.items():
@@ -265,10 +236,10 @@ class OneRowOrNoneTests(_SettingsTestCase):
 
 
 class IsolationTests(_SettingsTestCase):
-    """AC-8982-13: a row of another user or of another key (a greater id) is never read nor changed."""
+    """AC-9054-14: a row of another user or of another key (a greater id) is never read nor changed."""
 
     def test_the_readers_never_read_or_change_a_row_of_another_user_or_key(self):
-        """AC-8982-13: the theme, the layouts and the panel read only the row of the user and the key."""
+        """AC-9054-14: the theme and the panel read only the row of the user and the key."""
         points = self._read_points()
         self.assertTrue(points)
         for name, point in points.items():
@@ -277,7 +248,7 @@ class IsolationTests(_SettingsTestCase):
                     point(n, True)
 
     def test_the_editors_never_read_or_change_a_row_of_another_user_or_key(self):
-        """AC-8982-13: a new widget and the deletes change only the row of the widget's owner and the key."""
+        """AC-9054-14: a new widget and the deletes change only the row of the widget's owner and the key."""
         points = self._edit_points()
         self.assertTrue(points)
         for name, point in points.items():

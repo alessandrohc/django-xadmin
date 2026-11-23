@@ -10,7 +10,6 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import DEFAULT_DB_ALIAS, connections, models, transaction
 from django.db.models.base import ModelBase
 from django.db.models.signals import post_migrate
-from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.encoding import smart_str
@@ -80,29 +79,6 @@ def add_view_permissions(sender, **kwargs):
 
 # ensure view permissions exist after every migration
 post_migrate.connect(add_view_permissions, dispatch_uid="xadmin_add_view_permissions")
-
-
-class Bookmark(models.Model):
-	title = models.CharField(_('Title'), max_length=128)
-	user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name=_("user"), blank=True, null=True)
-	url_name = models.CharField(_('Url Name'), max_length=64)
-	content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-	query = models.CharField(_('Query String'), max_length=1000, blank=True)
-	is_share = models.BooleanField(_('Is Shared'), default=False)
-
-	@property
-	def url(self):
-		base_url = reverse(self.url_name)
-		if self.query:
-			base_url = base_url + '?' + self.query
-		return base_url
-
-	def __str__(self):
-		return self.title
-
-	class Meta:
-		verbose_name = _('Bookmark')
-		verbose_name_plural = _('Bookmarks')
 
 
 class JSONEncoder(DjangoJSONEncoder):

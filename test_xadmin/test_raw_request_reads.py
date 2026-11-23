@@ -1,18 +1,15 @@
 # coding=utf-8
-"""The quick edit, the bookmark and the export selection answer 400, not 500, to input the screen never sends. See #8985.
+"""The export selection answers 400, not 500, to input the screen never sends. See #8985.
 
-Three plugins read ``request.GET``/``request.POST`` without a form: ``request.GET['fields']`` of the quick edit
-(``plugins/editable.py``), ``request.POST['title']`` and the other raw values of the bookmark (``plugins/bookmark.py``) and,
-in the export, ``_selected_actions`` in a ``pk__in`` and ``int(format)`` (``plugins/importexport.py``). A missing parameter,
-an id the key field does not convert or a ``format`` that is not an index of the formats gave a 500, and on SQLite a number
-the column cannot hold gave one too. The tests pin the answer now: 400 before anything is saved, exported or sent, an id no
-object owns exported as nothing, and everything the screen does send unchanged.
+The export reads ``_selected_actions`` in a ``pk__in`` and ``int(format)`` (``plugins/importexport.py``). An id the key
+field does not convert or a ``format`` that is not an index of the formats gave a 500, and on SQLite a number the column
+cannot hold gave one too. The tests pin the answer now: 400 before anything is exported or sent, an id no object owns
+exported as nothing, and everything the screen does send unchanged. (The quick edit and the bookmark, which the #8985
+also covered, left the package in #9054 with their plugins.)
 
 The module also pins what must not move around those lines: the 403 and the 404 that come before the new checks, the
 warnings (302) that win over the 400, the scopes that ignore the selection, ``file_format``, the e-mail delivery, the
 visibility of the export (an object the admin does not show to the user is never exported) and the gate of the site.
-
-The bookmark plugin is excluded by the host project (``XADMIN_EXCLUDE_PLUGINS``), so its tests hold for the package alone.
 
 The client is built with ``raise_request_exception=False`` so a 500 shows up as a status to compare, and the red fails on
 the assertion instead of erroring on the exception. The attribute ``client`` of the ``TestCase`` is left alone: the actor's
@@ -25,7 +22,6 @@ client is built per call.
 """
 import csv
 import io
-import json
 import uuid
 from unittest import mock
 
@@ -35,7 +31,6 @@ from django.test import Client, TestCase
 import tablib
 from import_export.formats.base_formats import DEFAULT_FORMATS
 
-from xadmin.models import Bookmark
 from xadmin.plugins.importexport import ExportPlugin
 from xadmin.sites import site
 from xadmin.views.list import ListAdminView
@@ -46,7 +41,6 @@ AUTHOR_LIST = '/xadmin/xadmin_fixture/author/'
 TAG_LIST = '/xadmin/xadmin_fixture/tag/'
 NOTE_LIST = '/xadmin/xadmin_fixture/note/'
 RANKED_LIST = '/xadmin/xadmin_fixture/ranked/'
-BOOKMARK_URL = AUTHOR_LIST + 'bookmark/'
 
 # uma chave inteira que nenhum objeto tem (a mesma de test_invalid_post_input.py e test_save_order_route.py), o número que
 # nenhuma coluna inteira comporta (30 dígitos: o SQLite estoura no `pk__in`) e o texto que nenhuma chave converte
@@ -71,10 +65,6 @@ def _staff(username, *codenames):
 def _table(model):
     """The whole table of the model, to compare before and after a request."""
     return list(model.objects.order_by('pk').values())
-
-
-def _patch_url(list_url, pk):
-    return f'{list_url}{pk}/patch/'
 
 
 class _ClientMixin:
@@ -123,153 +113,6 @@ class _ExportMixin(_ClientMixin):
         self.assertFalse(response.has_header('Content-Disposition'), msg=f'{msg}: no file may be served')
         levels = [message.level for message in get_messages(response.wsgi_request)]
         self.assertEqual(levels, [WARNING], msg=f'{msg}: the redirect must carry one warning')
-
-
-class EditPatchTests(_ClientMixin, TestCase):
-    """The quick edit (``<id>/patch/``, GET) without the ``fields`` the screen always sends."""
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.changer = _staff('raw-patch-changer', 'view_author', 'change_author', 'view_tag', 'change_tag')
-        cls.viewer = _staff('raw-patch-viewer', 'view_author', 'view_tag')
-        cls.blind = _staff('raw-patch-blind')
-        cls.author = Author.objects.create(name='author-one')
-        cls.tag = Tag.objects.create(name='tag-one')
-
-    def _targets(self):
-        """(label, model, list url, an object's key): the integer key and the UUID key."""
-        return (('author', Author, AUTHOR_LIST, self.author.pk), ('tag', Tag, TAG_LIST, self.tag.pk))
-
-    def test_quick_edit_without_fields_answers_400(self):
-        """AC-8985-1: a edição rápida de quem pode alterar o objeto, sem o parâmetro `fields`, responde 400."""
-        for name, model, list_url, pk in self._targets():
-            before = _table(model)
-            client = self._client_for(self.changer)
-            # controle positivo: o mesmo ator e o mesmo objeto com o `fields` que a tela manda abrem o formulário, então o
-            # 400 abaixo é do parâmetro que falta e não de permissão ou de ambiente
-            control = client.get(_patch_url(list_url, pk), {'fields': 'name'})
-            self.assertEqual(control.status_code, 200, msg=f'{name}: control: the screen\'s own request must open the form')
-            with self.subTest(model=name):
-                response = client.get(_patch_url(list_url, pk))
-                self.assertEqual(response.status_code, 400, msg='a quick edit without fields must answer 400')
-                self.assertEqual(_table(model), before, msg='nothing may be saved')
-
-    def test_quick_edit_with_fields_keeps_answering_the_form_of_the_editable_fields(self):
-        """AC-8985-2: com `fields` vazio, de campos editáveis, da chave inteira ou de nomes que o modelo não tem, segue em 200."""
-        cases = {
-            # (consulta, o campo `name` deve estar no formulário, modelos em que o caso vale): a chave inteira numerada pelo
-            # banco (o `Author` usa `BigAutoField`) é editável, mas o formulário não a oferece (`AutoFieldMixin.formfield`
-            # devolve nulo: django/db/models/fields/__init__.py:2833), então nunca aparece. O caso vale só no `Author`: a chave
-            # UUID do `Tag` é `editable=False` e nomeá-la em `fields` dá 500 (`FieldError`) hoje, fora deste ticket (medido em
-            # `runs/diag-7.log`; follow-up F5 e adendo em `notes/entrega.md`)
-            'field name': ('?fields=name', True, ('author', 'tag')),
-            'empty': ('?fields=', False, ('author', 'tag')),
-            'name the model lacks': ('?fields=zzz', False, ('author', 'tag')),
-            'automatic key field': ('?fields=id', False, ('author',)),
-            'field name and automatic key field': ('?fields=name,id', True, ('author',)),
-        }
-        for name, model, list_url, pk in self._targets():
-            before = _table(model)
-            for case, (query, has_name, models) in cases.items():
-                if name not in models:
-                    continue
-                with self.subTest(model=name, case=case):
-                    response = self._client_for(self.changer).get(_patch_url(list_url, pk) + query)
-                    self.assertEqual(response.status_code, 200, msg='a quick edit with fields must answer 200')
-                    html = response.content.decode('utf-8')
-                    self.assertEqual('name="name"' in html, has_name,
-                                     msg='the form must hold the editable fields asked for, and only those')
-                    self.assertNotIn('name="id"', html, msg='the key field is not editable: it never shows up')
-            self.assertEqual(_table(model), before, msg='a GET must not save anything')
-
-    def test_quick_edit_without_change_permission_answers_403_before_the_missing_fields(self):
-        """AC-8985-3 (controle): sem permissão de alterar a edição rápida sem `fields` responde 403, nunca 400."""
-        for name, model, list_url, pk in self._targets():
-            # controle positivo: com a permissão o mesmo objeto abre
-            control = self._client_for(self.changer).get(_patch_url(list_url, pk), {'fields': 'name'})
-            self.assertEqual(control.status_code, 200, msg=f'{name}: control: the actor who can change must open the form')
-            for who, user in (('view permission only', self.viewer), ('no permission', self.blind)):
-                with self.subTest(model=name, who=who):
-                    response = self._client_for(user).get(_patch_url(list_url, pk))
-                    self.assertEqual(response.status_code, 403, msg='who cannot change the model gets 403, not 400')
-
-    def test_quick_edit_of_an_object_that_does_not_exist_answers_404_before_the_missing_fields(self):
-        """AC-8985-4 (controle): a edição rápida sem `fields` de um objeto que não existe responde 404, nunca 400."""
-        for name, model, list_url, pk in self._targets():
-            control = self._client_for(self.changer).get(_patch_url(list_url, pk), {'fields': 'name'})
-            self.assertEqual(control.status_code, 200, msg=f'{name}: control: an object that exists must open the form')
-            missing = MISSING_ID if name == 'author' else str(uuid.uuid4())
-            for case, key in (('an id no object owns', missing), ('text that is not a key', 'abc')):
-                with self.subTest(model=name, case=case):
-                    response = self._client_for(self.changer).get(_patch_url(list_url, key))
-                    self.assertEqual(response.status_code, 404, msg='an object that does not exist gets 404, not 400')
-
-
-class BookmarkRawInputTests(_ClientMixin, TestCase):
-    """The creation of a bookmark (``bookmark/``, POST) with what the screen never sends (the package alone)."""
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.bookmarker = _staff('raw-bookmarker', 'view_author', 'add_bookmark')
-        cls.author = Author.objects.create(name='bookmark-author')
-
-    def _post(self, data):
-        return self._client_for(self.bookmarker).post(BOOKMARK_URL, data)
-
-    def test_invalid_bookmark_input_answers_400_and_creates_nothing(self):
-        """AC-8985-5: o favorito sem `title`, com texto maior que o campo, com o byte NUL ou com `is_share` ruim dá 400."""
-        # os limites dos casos abaixo são os do campo: o teste se desfaz se a coluna mudar
-        self.assertEqual(Bookmark._meta.get_field('title').max_length, 128)
-        self.assertEqual(Bookmark._meta.get_field('query').max_length, 1000)
-        # controle positivo: o formulário da lista (`title` e `query`) cria o favorito pela mesma rota e pelo mesmo ator
-        before = Bookmark.objects.count()
-        control = self._post({'title': 'mine', 'query': 'a=1'})
-        self.assertEqual(control.status_code, 200, msg='control: the list form must create a bookmark')
-        self.assertEqual(Bookmark.objects.count(), before + 1, msg='control: the bookmark must be created')
-
-        cases = {
-            'no title next to a query': {'query': 'a=1'},
-            'no data at all': {},
-            'title of 129 characters': {'title': 'x' * 129},
-            'query of 1001 characters': {'title': 'x', 'query': 'q' * 1001},
-            'NUL byte in the title': {'title': 'a\x00b'},
-            'NUL byte in the query': {'title': 'x', 'query': 'a=\x00'},
-        }
-        for bad in ('on', 'abc', 'true', '2', ''):
-            cases[f'is_share {bad!r}'] = {'title': 'x', 'is_share': bad}
-        for case, data in cases.items():
-            with self.subTest(case=case):
-                before = Bookmark.objects.count()
-                response = self._post(data)
-                self.assertEqual(response.status_code, 400, msg='an invalid bookmark must answer 400')
-                self.assertEqual(Bookmark.objects.count(), before, msg='no bookmark may be created')
-
-    def test_valid_bookmark_input_keeps_creating_the_bookmark(self):
-        """AC-8985-6: `title` (também vazio), `query` (também ausente) e `is_share` que o campo converte criam o favorito."""
-        cases = [
-            ('title and query', {'title': 'mine', 'query': 'a=1&b=2'}, False),
-            ('title only', {'title': 'mine'}, False),
-            ('empty title', {'title': ''}, False),
-            ('title of exactly 128 characters', {'title': 't' * 128}, False),
-            ('query of exactly 1000 characters', {'title': 'x', 'query': 'q' * 1000}, False),
-        ]
-        # os seis valores que o `BooleanField` do favorito converte; ausente é o padrão (falso)
-        for share, shared in (('0', False), ('1', True), ('True', True), ('False', False), ('t', True), ('f', False)):
-            cases.append((f'is_share {share!r}', {'title': 'x', 'is_share': share}, shared))
-        for case, data, shared in cases:
-            with self.subTest(case=case):
-                before = Bookmark.objects.count()
-                response = self._post(data)
-                self.assertEqual(response.status_code, 200, msg='a valid bookmark must be created')
-                self.assertEqual(Bookmark.objects.count(), before + 1, msg='exactly one bookmark must be created')
-                answer = json.loads(response.content)
-                query = data.get('query', '')
-                self.assertEqual(answer['title'], data['title'], msg='the answer must carry the title')
-                self.assertEqual(answer['url'], AUTHOR_LIST + (f'?{query}' if query else ''),
-                                 msg='the answer must carry the address of the list with the query')
-                row = Bookmark.objects.order_by('-pk').first()
-                self.assertEqual((row.user, row.title, row.query, row.is_share), (self.bookmarker, data['title'], query, shared),
-                                 msg='the row must hold what was sent, with the user and the converted is_share')
 
 
 class ExportSelectionTests(_ExportMixin, TestCase):
@@ -685,32 +528,25 @@ class ExportFormatTests(_ExportMixin, TestCase):
 
 
 class SiteGateTests(_ClientMixin, TestCase):
-    """The gate of the site answers before the three routes: the new 400 is not reachable by who is not in."""
+    """The gate of the site answers before the export route: the new 400 is not reachable by who is not in."""
 
     @classmethod
     def setUpTestData(cls):
         cls.plain = User.objects.create_user('raw-gate-plain', 'raw-gate-plain@example.com', 'not-a-real-password')
         cls.author = Author.objects.create(name='gate-author')
 
-    def test_visitor_and_non_staff_user_get_the_site_gate_on_the_three_routes(self):
-        """AC-8985-19 (controle): o visitante e o usuário fora da equipe seguem no portão do site, nunca no 400, nas 3 rotas."""
-        # (método, rota, a requisição que a tela manda, a requisição inválida do critério)
-        routes = {
-            'quick edit': ('get', _patch_url(AUTHOR_LIST, self.author.pk), {'fields': 'name'}, {}),
-            'bookmark': ('post', BOOKMARK_URL, {'title': 'x'}, {}),
-            'export': ('get', AUTHOR_LIST, {'_action_': 'export', 'format': '0', 'scope': 'all'},
-                       {'_action_': 'export', 'format': 'abc', 'scope': 'selected', '_selected_actions': 'abc'}),
-        }
-        author_before, bookmarks_before = _table(Author), Bookmark.objects.count()
+    def test_visitor_and_non_staff_user_get_the_site_gate_on_the_export_route(self):
+        """AC-9054-9: o visitante e o usuário fora da equipe seguem no portão do site, nunca no 400, na rota da exportação."""
+        valid = {'_action_': 'export', 'format': '0', 'scope': 'all'}
+        invalid = {'_action_': 'export', 'format': 'abc', 'scope': 'selected', '_selected_actions': 'abc'}
+        author_before = _table(Author)
         for who, client in {'visitor': self._client_for(), 'non-staff': self._client_for(self.plain)}.items():
-            for route, (method, url, valid, invalid) in routes.items():
-                with self.subTest(who=who, route=route):
-                    gate = getattr(client, method)(url, valid)
-                    response = getattr(client, method)(url, invalid)
-                    self.assertEqual(gate.status_code, 200, msg='the gate is the login page')
-                    self.assertEqual(response.status_code, gate.status_code,
-                                     msg='the invalid input must get the answer the gate gives')
-                    self.assertFalse(response.has_header('Location'), msg='the gate does not redirect')
-                    self.assertFalse(response.has_header('Content-Disposition'), msg='no file may be served')
-                    self.assertEqual(_table(Author), author_before)
-                    self.assertEqual(Bookmark.objects.count(), bookmarks_before, msg='no bookmark may be created')
+            with self.subTest(who=who):
+                gate = client.get(AUTHOR_LIST, valid)
+                response = client.get(AUTHOR_LIST, invalid)
+                self.assertEqual(gate.status_code, 200, msg='the gate is the login page')
+                self.assertEqual(response.status_code, gate.status_code,
+                                 msg='the invalid input must get the answer the gate gives')
+                self.assertFalse(response.has_header('Location'), msg='the gate does not redirect')
+                self.assertFalse(response.has_header('Content-Disposition'), msg='no file may be served')
+                self.assertEqual(_table(Author), author_before)
