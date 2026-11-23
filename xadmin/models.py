@@ -133,6 +133,16 @@ class UserSettings(models.Model):
 	def set_json(self, obj):
 		self.value = json.dumps(obj, cls=JSONEncoder, ensure_ascii=False)
 
+	@classmethod
+	def get_latest(cls, user, key):
+		# nada garante uma só linha por (usuário, chave) (#8983): duas requisições que não acharam a linha criam duas.
+		# Com mais de uma vale a última gravada (a de maior id), a mesma que o `get_widgets` do painel lê. Levanta
+		# `DoesNotExist` como o `get` que substitui, então quem o chama mantém o `except` que já tinha.
+		row = cls.objects.filter(user=user, key=key).order_by('-pk').first()
+		if row is None:
+			raise cls.DoesNotExist
+		return row
+
 	def __str__(self):
 		return "%s %s" % (self.user, self.key)
 
@@ -161,7 +171,7 @@ class UserWidget(models.Model):
 		super(UserWidget, self).save(*args, **kwargs)
 		if created:
 			try:
-				portal_pos = UserSettings.objects.get(
+				portal_pos = UserSettings.get_latest(
 					user=self.user, key="dashboard:%s:pos" % self.page_id)
 				portal_pos.value = "%s,%s" % (self.pk, portal_pos.value) if portal_pos.value else self.pk
 				portal_pos.save()

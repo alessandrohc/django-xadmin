@@ -43,7 +43,8 @@ class ModelFormPlugin(BasePortalPlugin):
 			fs_map[f.css_id] = f
 
 		try:
-			layout_pos = UserSettings.objects.get(
+			# com mais de uma linha vale a última gravada (#8983)
+			layout_pos = UserSettings.get_latest(
 				user=self.user, key=self._portal_key()).value
 			layout_cs = layout_pos.split('|')
 			for i, c in enumerate(cs):

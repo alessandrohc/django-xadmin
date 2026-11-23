@@ -133,7 +133,8 @@ class UserWidgetAdmin:
 
 	def update_dashboard(self, obj):
 		try:
-			portal_pos = UserSettings.objects.get(
+			# com mais de uma linha vale a última gravada, a que o `get_widgets` lê (#8983)
+			portal_pos = UserSettings.get_latest(
 				user=obj.user, key="dashboard:%s:pos" % obj.page_id)
 		except UserSettings.DoesNotExist:
 			return
@@ -599,7 +600,8 @@ class Dashboard(CommAdminView):
 	def get_widgets(self):
 
 		if self.widget_customiz:
-			portal_pos = UserSettings.objects.filter(user=self.user, key=self.get_portal_key())
+			# com mais de uma linha vale a última gravada (#8983), a mesma que as edições da posição alteram
+			portal_pos = UserSettings.objects.filter(user=self.user, key=self.get_portal_key()).order_by('-pk')
 			if len(portal_pos):
 				portal_pos = portal_pos[0].value
 				widgets = []
@@ -687,8 +689,9 @@ class Dashboard(CommAdminView):
 						user=self.user, page_id=self.get_page_id(), id=widget_id)
 					widget.delete()
 					try:
-						portal_pos = UserSettings.objects.get(user=self.user,
-						                                      key="dashboard:%s:pos" % self.get_page_id())
+						# com mais de uma linha vale a última gravada (#8983)
+						portal_pos = UserSettings.get_latest(user=self.user,
+						                                     key="dashboard:%s:pos" % self.get_page_id())
 						pos = [[w for w in col.split(',') if w != str(
 							widget_id)] for col in portal_pos.value.split('|')]
 						portal_pos.value = '|'.join([','.join(col) for col in pos])

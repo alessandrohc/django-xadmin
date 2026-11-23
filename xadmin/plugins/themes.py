@@ -35,7 +35,8 @@ class ThemePlugin(BaseAdminPlugin):
 	def _get_theme(self):
 		if self.user:
 			try:
-				return UserSettings.objects.get(user=self.user, key="site-theme").value
+				# com mais de uma linha vale a última gravada (#8983)
+				return UserSettings.get_latest(user=self.user, key="site-theme").value
 			except Exception:
 				pass
 		if '_theme' in self.request.COOKIES:
