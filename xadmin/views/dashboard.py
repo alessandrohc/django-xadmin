@@ -3,7 +3,7 @@ import copy
 
 from django import forms
 from django.apps import apps
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models.base import ModelBase
 from django.forms.forms import DeclarativeFieldsMetaclass
 from django.forms.utils import flatatt
@@ -323,8 +323,22 @@ class ModelChoiceField(forms.ChoiceField):
 	def to_python(self, value):
 		if isinstance(value, ModelBase):
 			return value
-		app_label, model_name = value.lower().split('.')
-		return apps.get_model(app_label, model_name)
+		# o valor vem do POST (#8987): ausente ou vazio cai no «obrigatório» do Field.clean; o que não tem
+		# a forma `app.model` e o que não é um modelo do Django são recusas do campo, não exceções soltas
+		if value in self.empty_values:
+			return ''
+		try:
+			app_label, model_name = str(value).lower().split('.')
+		except ValueError:
+			raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice',
+			                      params={'value': value})
+		try:
+			return apps.get_model(app_label, model_name)
+		except LookupError:
+			# rótulo bem formado de um app ou modelo que não existe: o código próprio deixa o get_widgets
+			# (o `except WidgetDataError` dele, neste arquivo) apagar o widget salvo, como o LookupError fazia
+			raise ValidationError(self.error_messages['invalid_choice'], code='unknown_model',
+			                      params={'value': value})
 
 	def prepare_value(self, value):
 		if isinstance(value, ModelBase):
@@ -604,6 +618,14 @@ class Dashboard(CommAdminView):
 									except LookupError:
 										# remove invalid widget
 										widget.delete()
+									except WidgetDataError as e:
+										# o modelo do widget não existe mais (#8987): o campo recusa com o código
+										# `unknown_model` e a limpeza que o LookupError fazia continua; outro dado
+										# inválido sobe para o `except Exception` de baixo, que só loga (o widget
+										# fica no banco, como antes)
+										if not e.widget.has_error('model', 'unknown_model'):
+											raise
+										widget.delete()
 							except Exception as e:
 								import logging
 								logging.error(e, exc_info=True)
@@ -650,7 +672,11 @@ class Dashboard(CommAdminView):
 			except ValueError:
 				return HttpResponseBadRequest()
 			if request.POST.get('_delete', None) != 'on':
-				widget = self.get_widget(widget_id, request.POST.copy())
+				try:
+					widget = self.get_widget(widget_id, request.POST.copy())
+				except WidgetDataError:
+					# os dados vêm do POST (#8987): o formulário do tipo do widget os recusou
+					return HttpResponseBadRequest()
 				if widget is None:
 					# not a widget of this user on this page: unknown, or somebody else's
 					raise Http404
