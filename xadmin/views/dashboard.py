@@ -133,7 +133,8 @@ class UserWidgetAdmin:
 
 	def update_dashboard(self, obj):
 		try:
-			# com mais de uma linha vale a última gravada, a que o `get_widgets` lê (#8983)
+			# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última gravada, a que o
+			# `get_widgets` lê (#8983)
 			portal_pos = UserSettings.get_latest(
 				user=obj.user, key="dashboard:%s:pos" % obj.page_id)
 		except UserSettings.DoesNotExist:
@@ -590,9 +591,12 @@ class Dashboard(CommAdminView):
 					continue
 			portal.append(portal_col)
 
-		UserSettings(
+		# duas primeiras aberturas do painel ao mesmo tempo (#8982): a linha da posição que a outra criou no meio do
+		# caminho é atualizada em vez de criar uma segunda (o `save()` aqui levantaria `IntegrityError`); vence a última
+		# requisição, e as aberturas seguintes listam os widgets dela
+		UserSettings.objects.update_or_create(
 			user=self.user, key="dashboard:%s:pos" % self.get_page_id(),
-			value='|'.join([','.join([str(w.id) for w in col]) for col in portal])).save()
+			defaults={'value': '|'.join([','.join([str(w.id) for w in col]) for col in portal])})
 
 		return portal
 
@@ -600,7 +604,8 @@ class Dashboard(CommAdminView):
 	def get_widgets(self):
 
 		if self.widget_customiz:
-			# com mais de uma linha vale a última gravada (#8983), a mesma que as edições da posição alteram
+			# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última gravada (#8983), a
+			# mesma que as edições da posição alteram
 			portal_pos = UserSettings.objects.filter(user=self.user, key=self.get_portal_key()).order_by('-pk')
 			if len(portal_pos):
 				portal_pos = portal_pos[0].value
@@ -689,7 +694,8 @@ class Dashboard(CommAdminView):
 						user=self.user, page_id=self.get_page_id(), id=widget_id)
 					widget.delete()
 					try:
-						# com mais de uma linha vale a última gravada (#8983)
+						# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última
+						# gravada (#8983)
 						portal_pos = UserSettings.get_latest(user=self.user,
 						                                     key="dashboard:%s:pos" % self.get_page_id())
 						pos = [[w for w in col.split(',') if w != str(

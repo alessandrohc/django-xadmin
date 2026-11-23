@@ -1,6 +1,7 @@
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.views import LoginView as AuthLoginView
 from django.contrib.auth.views import LogoutView as logout
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
@@ -32,11 +33,21 @@ class UserSettingView(BaseAdminView):
 		# column, is a 400. The empty value is valid, as it always was.
 		if key is None or val is None or len(key) > UserSettings._meta.get_field('key').max_length:
 			return HttpResponseBadRequest()
-		# Nothing keeps (user, key) unique (#8930), so the key may already have two rows, and
-		# `get_or_create` would raise on them: update every row of the key (save() keeps the
-		# signals) and create one only when there is none.
-		rows = list(UserSettings.objects.filter(user=self.user, key=key)) or [
-			UserSettings(user=self.user, key=key)]
+		# (usuário, chave) é único desde a migração 0005 (#8982), mas duas requisições de uma chave nova podem não
+		# achar a linha e as duas criarem: a segunda bate na restrição. O `atomic` mantém a transação utilizável
+		# depois do erro, e a linha que a primeira criou é atualizada (a última gravação vence). Num banco ainda sem a
+		# 0005 a chave pode ter mais de uma linha (#8930): todas são atualizadas (o `save()` mantém os sinais).
+		rows = list(UserSettings.objects.filter(user=self.user, key=key))
+		if not rows:
+			try:
+				with transaction.atomic():
+					UserSettings.objects.create(user=self.user, key=key, value=val)
+				return HttpResponse('')
+			except IntegrityError:
+				rows = list(UserSettings.objects.filter(user=self.user, key=key))
+				if not rows:
+					# não é a corrida: outra integridade (a chave estrangeira do usuário)
+					raise
 		for us in rows:
 			us.value = val
 			us.save()

@@ -5,8 +5,9 @@ Five views of the package read ``request.POST`` without a form and used the raw 
 the batch action of the list (``_selected_action``), the dashboard (``id``), the sortable
 list (``order[]``), the version comparison (``version_a``/``version_b``) and the user
 setting (``key`` and ``value``). An authenticated client that sent text where the key
-field wants a number, the NUL byte, a missing parameter, a key longer than the column or
-a key that already has two rows got a 500. These tests pin the answer a client should
+field wants a number, the NUL byte, a missing parameter, a key longer than the column
+got a 500 (a key that already had two rows did too, until the unique constraint of #8982 made that state
+unreachable). These tests pin the answer a client should
 get: 400 for the input the key field does not convert, 404 for an id the key accepts but
 no object owns, and a normal answer for every valid input (the ``(controle)`` tests).
 
@@ -413,15 +414,6 @@ class UserSettingTests(_ClientMixin, TestCase):
         response = self._post({'key': 'k' * 256, 'value': 'v'})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(UserSettings.objects.get().key, 'k' * 256)
-
-    def test_key_with_two_rows_updates_all_of_them(self):
-        """AC-8930-8: a chave que já tem duas linhas atualiza o valor das duas e responde 200 sem corpo."""
-        UserSettings.objects.create(user=self.user, key='dup', value='old')
-        UserSettings.objects.create(user=self.user, key='dup', value='old')
-        response = self._post({'key': 'dup', 'value': 'new'})
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content, b'')
-        self.assertEqual(list(UserSettings.objects.values_list('value', flat=True)), ['new', 'new'])
 
     def test_new_key_is_created_and_an_empty_value_is_valid(self):
         """AC-8930-15 (controle): uma chave nova é criada, e o `value` vazio é válido."""

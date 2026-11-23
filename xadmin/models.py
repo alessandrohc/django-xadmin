@@ -135,9 +135,10 @@ class UserSettings(models.Model):
 
 	@classmethod
 	def get_latest(cls, user, key):
-		# nada garante uma só linha por (usuário, chave) (#8983): duas requisições que não acharam a linha criam duas.
-		# Com mais de uma vale a última gravada (a de maior id), a mesma que o `get_widgets` do painel lê. Levanta
-		# `DoesNotExist` como o `get` que substitui, então quem o chama mantém o `except` que já tinha.
+		# num banco ainda sem a migração 0005 (#8982) nada garante uma só linha por (usuário, chave) (#8983): duas
+		# requisições que não acharam a linha criam duas. Com mais de uma vale a última gravada (a de maior id), a mesma
+		# que o `get_widgets` do painel lê. Levanta `DoesNotExist` como o `get` que substitui, então quem o chama mantém
+		# o `except` que já tinha.
 		row = cls.objects.filter(user=user, key=key).order_by('-pk').first()
 		if row is None:
 			raise cls.DoesNotExist
@@ -149,6 +150,8 @@ class UserSettings(models.Model):
 	class Meta:
 		verbose_name = _('User Setting')
 		verbose_name_plural = _('User Settings')
+		# uma só linha por (usuário, chave) (#8982); a migração 0005 junta as repetidas antes de criar a restrição
+		constraints = [models.UniqueConstraint(fields=['user', 'key'], name='xadmin_usersettings_user_key_uniq')]
 
 
 class UserWidget(models.Model):
