@@ -12,7 +12,7 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin  # noqa: F401  (keeps import order honest)
 
-from test_xadmin.fixtureapp.models import Author, Book, Ranked, RankedUuid, Tag
+from test_xadmin.fixtureapp.models import Author, Book, Note, Ranked, RankedUuid, Tag
 from test_xadmin.fixtureapp.resources import BookResource
 
 
@@ -69,6 +69,15 @@ class RankedAdmin:
     search_fields = ('name',)
     actions = [MarkSeenAction, ReplyAction]
 
+    @property
+    def formats(self):
+        # só os binários, como os admins do plus_base que restringem a lista (User, Section e Info do plus_base e o do
+        # plus_log_http): o índice do `format` da exportação vale contra esta lista, não contra a padrão (#8985). O xadmin
+        # copia o atributo que não é chamável para o plugin (`_get_merge_attrs`, sites.py:436-442), então o `self` aqui é o
+        # plugin e a property não lê nada dele
+        from import_export.formats import base_formats
+        return (base_formats.XLS, base_formats.XLSX)
+
 
 class TagAdmin:
     list_display = ('name',)
@@ -81,8 +90,17 @@ class RankedUuidAdmin:
     list_order_field = 'position'
 
 
+class NoteAdmin:
+    list_display = ('name',)
+    # each user only sees the notes they own: the ``ModelPermissionPlugin`` narrows ``queryset()`` (plugins/auth.py:154-163).
+    # The owner is left out of ``list_display`` on purpose: the plugin removes it for a non-superuser (auth.py:165-170)
+    user_can_access_owned_objects_only = True
+    user_owned_objects_field = 'owner'
+
+
 site.register(Author, AuthorAdmin)
 site.register(Book, BookAdmin)
 site.register(Ranked, RankedAdmin)
 site.register(Tag, TagAdmin)
 site.register(RankedUuid, RankedUuidAdmin)
+site.register(Note, NoteAdmin)

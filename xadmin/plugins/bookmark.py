@@ -1,8 +1,9 @@
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.forms import ModelChoiceField
-from django.http import QueryDict
+from django.http import HttpResponseBadRequest, QueryDict
 from django.template import loader
 from django.urls.base import reverse
 from django.utils.decorators import method_decorator
@@ -139,16 +140,43 @@ class BookmarkPlugin(BaseAdminPlugin):
 
 class BookmarkView(ModelAdminView):
 
+	@staticmethod
+	def _clean(post):
+		"""Confere o que a rota recebe sem formulário e devolve ``(title, query, is_share)``; levanta ``ValueError`` se recusa.
+
+		A tela só manda ``title`` e ``query`` (``model_list.nav_menu.bookmarks.html:40-41``), então só a requisição forjada,
+		ou um título maior que o campo (a caixa de título não tem ``maxlength``, ``:41``), chega a uma recusa (#8985). O
+		``title`` vazio e o ``query`` ausente seguem aceitos.
+		O ``is_share`` é convertido pelo próprio campo do favorito, que é o que a coluna já aceitava (``0``, ``1``,
+		``True``, ``False``, ``t``, ``f`` e o padrão ``0``): um ``forms.BooleanField`` leria ``'0'`` como verdadeiro.
+		"""
+		if 'title' not in post:
+			raise ValueError('title')
+		title, query = post['title'], post.get('query', '')
+		for name, value in (('title', title), ('query', query)):
+			# o limite é o do campo (sem número fixo): o MySQL estrito dá `DataError` no texto maior e o PostgreSQL recusa o
+			# byte NUL, mas o SQLite grava os dois; a recusa não depende do banco
+			if len(value) > Bookmark._meta.get_field(name).max_length or '\x00' in value:
+				raise ValueError(name)
+		try:
+			is_share = Bookmark._meta.get_field('is_share').to_python(post.get('is_share', 0))
+		except ValidationError:
+			raise ValueError('is_share') from None
+		return title, query, is_share
+
 	@csrf_protect_m
 	@transaction.atomic
 	def post(self, request):
+		try:
+			title, query, is_share = self._clean(request.POST)
+		except ValueError:
+			return HttpResponseBadRequest()
 		model_info = (self.opts.app_label, self.opts.model_name)
 		url_name = 'xadmin:%s_%s_changelist' % model_info
 		bookmark = Bookmark(
 			content_type=ContentType.objects.get_for_model(self.model),
-			title=request.POST[
-				'title'], user=self.user, query=request.POST.get('query', ''),
-			is_share=request.POST.get('is_share', 0), url_name=url_name)
+			title=title, user=self.user, query=query,
+			is_share=is_share, url_name=url_name)
 		bookmark.save()
 		content = {'title': bookmark.title, 'url': bookmark.url}
 		return self.render_response(content)

@@ -2,6 +2,7 @@
 """Two models with a plain FK, so an inline admin has a reverse relation to walk."""
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -86,6 +87,23 @@ class RankedUuid(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     position = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
+
+
+class Note(models.Model):
+    """Integer key with an owner: the admin only shows each user the rows they own (#8985).
+
+    ``NoteAdmin.user_can_access_owned_objects_only`` narrows the admin's ``queryset()`` to
+    ``owner=<the user>``, so a row can exist and still not be one the admin shows to a given
+    user: what the selection of the export must never reach.
+    """
+    name = models.CharField(max_length=100)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='+')
 
     class Meta:
         app_label = 'xadmin_fixture'

@@ -3,7 +3,7 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from django.db import models, transaction
 from django.forms import Media
 from django.forms.models import modelform_factory
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.utils.encoding import force_str, smart_str
 from django.utils.html import escape, conditional_escape
 from django.utils.safestring import mark_safe
@@ -113,6 +113,11 @@ class EditPatchView(ModelFormAdminView, ListAdminView):
 
 	@filter_hook
 	def get(self, request, object_id):
+		# a tela sempre manda `fields` (`EditablePlugin.result_item`, editable.py:48: `?fields=<campo>`); sem ele só a
+		# requisição forjada chega, e o `request.GET['fields']` abaixo dava 500. O 403 e o 404 saem antes, no `init_request`
+		# (#8985)
+		if 'fields' not in request.GET:
+			return HttpResponseBadRequest()
 		model_fields = [f.name for f in self.opts.fields]
 		fields = [f for f in request.GET['fields'].split(',') if f in model_fields]
 		defaults = {

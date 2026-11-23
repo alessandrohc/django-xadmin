@@ -48,7 +48,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseBadRequest, HttpResponseRedirect, HttpResponse
 from django.template import loader
 from django.template.response import TemplateResponse
 from django.urls.base import reverse
@@ -61,6 +61,7 @@ from import_export.signals import post_export, post_import
 from import_export.tmp_storages import TempFolderStorage
 from xadmin.plugins.utils import get_context_dict
 from xadmin.sites import site, AdminPath
+from xadmin.util import parse_pk, pk_fits, pk_range
 from xadmin.views import BaseAdminPlugin, ListAdminView, ModelAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
 
@@ -361,6 +362,15 @@ class ImportProcessView(ImportBaseView):
 			return HttpResponseRedirect(url)
 
 
+class InvalidExportSelection(ValueError):
+	"""A seleção da exportação tem um item que o campo da chave primária do modelo não converte (#8985).
+
+	O ``get_export_queryset`` a levanta e o ``ExportPlugin.get_response`` a responde com 400. É uma exceção própria, e não
+	um ``except ValueError`` em volta do hook, para que um ``ValueError`` do ORM ou de uma subclasse do host não seja
+	tomado por entrada do cliente.
+	"""
+
+
 class ExportMixin:
 	#: resource class
 	resource_class = None
@@ -438,7 +448,16 @@ class ExportMixin:
 			if not select_across:
 				selected = selected.strip()
 				if selected:
-					selected_pk = selected.split(',')
+					# a seleção vem da query string, sem formulário: cada item passa pelo campo da chave (o que ele não
+					# converte é entrada inválida) e o número que a coluna não comporta é um id sem objeto, porque o
+					# SQLite estoura no `pk__in` (xadmin/util.py:566-608, o molde do #8930). O filtro segue sobre o
+					# `queryset()` do admin: o objeto que ele não mostra ao usuário nunca é exportado
+					try:
+						selected_pk = [parse_pk(self.model, item) for item in selected.split(',')]
+					except ValueError:
+						raise InvalidExportSelection(selected) from None
+					pk_bounds = pk_range(self.model)
+					selected_pk = [pk for pk in selected_pk if pk_fits(pk, pk_bounds)]
 					queryset = self.admin_view.queryset().filter(pk__in=selected_pk)
 				else:
 					queryset = self.admin_view.queryset().none()
@@ -581,8 +600,21 @@ class ExportPlugin(ExportMixin, BaseAdminPlugin):
 			return HttpResponseRedirect(self.request.path)
 		else:
 			formats = self.get_export_formats()
-			file_format = formats[int(export_format)]()
-			queryset = self.get_export_queryset(self.request, context)
+			# o `format` é o índice da lista de formatos DO ADMIN (o plus_base restringe a de quatro admins: info.py:27,
+			# section.py:24 e user/adminx.py:77, em plus_base/publique/adminx, e plus_log_http/log_http/adminx.py:87): o texto
+			# que não é número e o índice fora da lista são entrada inválida, inclusive o negativo, que escolheria o último
+			# formato sem que a tela o mande (#8985). O `except` cobre só o `int()`
+			try:
+				index = int(export_format)
+			except ValueError:
+				return HttpResponseBadRequest()
+			if not 0 <= index < len(formats):
+				return HttpResponseBadRequest()
+			file_format = formats[index]()
+			try:
+				queryset = self.get_export_queryset(self.request, context)
+			except InvalidExportSelection:
+				return HttpResponseBadRequest()
 
 			# The export takes place in the background, so you do not have to wait.
 			if self.request.GET.get('result-action', '') == 'sendmail':
