@@ -6,6 +6,7 @@ of only for display.
 """
 from xadmin.views.list import ResultHeader
 
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404, HttpResponseBadRequest
 from django.template.loader import render_to_string
@@ -69,6 +70,16 @@ class SortableListPlugin(BaseAdminPlugin):
 
 class SaveOrderView(ModelAdminView):
 	list_order_field_inverse = False
+
+	def init_request(self, *args, **kwargs):
+		# a rota é registrada para todo modelo e o `post` não conferia permissão nenhuma (#8984): o 403 sai
+		# aqui, no `setup` (`xadmin/views/base.py:395-406`), antes do `dispatch`, do 404 do modelo sem
+		# ordenação (#8986) e dos ids (#8930), como nas outras views de modelo (lista, excluir, alterar).
+		# `has_change_permission()` (`xadmin/views/base.py:749-750`) é o gancho que honra o
+		# `remove_permissions` do admin, que entra na view como classe-base (`xadmin/sites.py:519-546`):
+		# `user.has_perm` direto o ignoraria
+		if not self.has_change_permission():
+			raise PermissionDenied
 
 	@csrf_protect_m
 	@transaction.atomic

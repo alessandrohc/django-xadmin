@@ -291,7 +291,7 @@ class SaveOrderTests(_ClientMixin, TestCase):
         return self._client_for(self.changer).post(self.URL, {'order[]': list(order)})
 
     def test_invalid_id_answers_400_and_changes_no_order(self):
-        """AC-8930-4: ao menos um id que a chave não converte dá 400 e a ordem de ninguém muda."""
+        """AC-8984-3: ao menos um id que a chave não converte dá 400 e a ordem de ninguém muda."""
         before = self._positions()
         for bad in INVALID_IDS:
             # o válido que vem antes do inválido não pode ter sido gravado; o 400 é um `return` e não desfaz o `atomic`
@@ -302,7 +302,7 @@ class SaveOrderTests(_ClientMixin, TestCase):
                     self.assertEqual(self._positions(), before, msg='no order may change')
 
     def test_ids_the_key_accepts_but_no_object_owns_answer_404_and_change_no_order(self):
-        """AC-8930-5: todos os ids aceitos e algum sem objeto dá 404 e a ordem de ninguém muda."""
+        """AC-8984-4: todos os ids aceitos e algum sem objeto dá 404 e a ordem de ninguém muda."""
         before = self._positions()
         for missing in (MISSING_ID, HUGE_ID):
             for order in ([self.r1.pk, missing], [missing, self.r1.pk]):
