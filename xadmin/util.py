@@ -572,11 +572,17 @@ def parse_pk(model, value):
 	turn into a 400 before anything is read or saved. The field decides what is valid, so
 	``' 5'`` and ``'1_0'`` are numbers for an integer key and a UUID key accepts only a UUID.
 	The conversion does not check the range of the database column: see ``pk_range``.
+	A text key accepts anything, including the NUL byte, so that one is refused here (#9027):
+	PostgreSQL rejects it with a 500 and the MySQL collation ignores it, so ``foo\\x00`` would
+	match the row of ``foo``.
 	"""
 	try:
-		return model._meta.pk.to_python(value)
+		converted = model._meta.pk.to_python(value)
 	except (ValidationError, TypeError, OverflowError):
 		raise ValueError(value) from None
+	if isinstance(converted, str) and '\x00' in converted:
+		raise ValueError(value)
+	return converted
 
 
 def pk_range(model):
