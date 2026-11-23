@@ -591,12 +591,13 @@ class Dashboard(CommAdminView):
 					continue
 			portal.append(portal_col)
 
-		# duas primeiras aberturas do painel ao mesmo tempo (#8982): a linha da posição que a outra criou no meio do
-		# caminho é atualizada em vez de criar uma segunda (o `save()` aqui levantaria `IntegrityError`); vence a última
-		# requisição, e as aberturas seguintes listam os widgets dela
-		UserSettings.objects.update_or_create(
-			user=self.user, key="dashboard:%s:pos" % self.get_page_id(),
-			defaults={'value': '|'.join([','.join([str(w.id) for w in col]) for col in portal])})
+		# duas primeiras aberturas do painel ao mesmo tempo (#9083): `save_for_user` trava a linha do usuário antes de criar
+		# a posição, e a linha que a outra abertura criou no meio do caminho é atualizada em vez de criar uma segunda; vence
+		# a última requisição, e as aberturas seguintes listam os widgets dela. Num banco legado com duas linhas atualiza
+		# todas (o `update_or_create` levantaria `MultipleObjectsReturned`)
+		UserSettings.save_for_user(
+			self.user, "dashboard:%s:pos" % self.get_page_id(),
+			'|'.join([','.join([str(w.id) for w in col]) for col in portal]))
 
 		return portal
 

@@ -1,11 +1,16 @@
 # coding=utf-8
-"""The readers and editors of ``UserSettings`` keep working with one row or none, and never touch another user or key. See #8983, #8982.
+"""The readers and editors of ``UserSettings`` keep working with one row or none, and with repeated rows (the greatest id wins). See #8983, #8982, #9083.
 
-The #8983 made every reader of ``UserSettings`` tolerate a key with more than one row (the greatest id wins). The #8982
-puts a unique constraint on (user, key), so that state cannot be built any more (a second row raises an integrity
-error) and the tests that built it left with it: the rule of the greatest id stays in the code only as a defence for a
-database that has not run the migration yet, with no promise in the living spec. What this module pins is what must stay
-as it was, at every point the #8983 touched: the behaviour with one row or none (AC-8982-10), the first opening of the
+The #9083 takes the unique constraint of the #8982 out (the old databases cannot be asked to run a migration), so a key
+can have more than one row again and the tolerant readers of the #8983 are the permanent defence: the greatest id is
+read (AC-9083-3), all the rows are updated by the ``settings/user`` route (AC-9083-4), and a widget that is created or
+removed edits the row of the greatest id (AC-9083-10). The tests of the repeated rows build them with a plain insert,
+which fails the fixture while the table has the constraint.
+
+
+The #8983 made every reader of ``UserSettings`` tolerate a key with more than one row (the greatest id wins). What this
+module also pins is what must stay as it was, at every point the #8983 touched: the behaviour with one row or none
+(AC-8982-10), the first opening of the
 panel and the new widget (AC-8982-11), the delete of a widget (AC-8982-12), and that a row of another user, or of
 another key of the same user, is never read nor changed (AC-8982-13). A row of an intruder is created *after* the
 user's own ones (a greater id) because, being the greatest id, it would win if the reader dropped the user or the key.
@@ -27,6 +32,7 @@ from types import SimpleNamespace
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout
 from django.contrib.auth.models import User
+from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
 
 from xadmin.layout import Column, Fieldset
@@ -44,6 +50,7 @@ UNRELATED_KEY = 'unrelated-setting'
 
 PANEL_URL = '/xadmin/'
 WIDGETS_URL = '/xadmin/xadmin/userwidget/'
+SETTINGS_URL = '/xadmin/settings/user'
 
 
 def _superuser(username):
@@ -277,3 +284,75 @@ class IsolationTests(_SettingsTestCase):
             for n in (0, 1):
                 with self.subTest(point=name, rows=n):
                     point(n, True)
+
+
+class RepeatedRowsTests(_SettingsTestCase):
+    """AC-9083-3, AC-9083-4, AC-9083-10: a key with more than one row of the same user."""
+
+    def _repeat(self, key, values):
+        """The owner's rows of the key, oldest first (the last one has the greatest id). Fails while the table refuses."""
+        rows = []
+        for value in values:
+            try:
+                with transaction.atomic():
+                    rows.append(UserSettings.objects.create(user=self.owner, key=key, value=value))
+            except IntegrityError:
+                self.fail('fixture: two rows of the same user and key cannot be built, the table still has the unique '
+                          'constraint (the #9083 takes it out)')
+        return rows
+
+    def test_the_theme_and_the_panel_position_read_the_row_of_the_greatest_id(self):
+        """AC-9083-3: with two rows of the key the theme and the panel use the value of the greater id."""
+        with self.subTest(point='theme'):
+            self._fresh()
+            self._repeat(THEME_KEY, ['/static/old.css', '/static/new.css'])
+            view = SimpleNamespace(admin_site=None, request=SimpleNamespace(COOKIES={'_theme': '/static/cookie.css'}),
+                                   user=self.owner, args=(), kwargs={})
+            self.assertEqual(ThemePlugin(view)._get_theme(), '/static/new.css',
+                             msg='the theme must be the value of the row of the greatest id')
+        with self.subTest(point='panel position'):
+            self._fresh()
+            widget_a, widget_b = self._widget('TITLEAAA'), self._widget('TITLEBBB')
+            self._repeat(POS_KEY, [str(widget_a.pk), str(widget_b.pk)])
+            response = self._browser().get(PANEL_URL)
+            body = response.content.decode('utf-8', 'replace')
+            self.assertEqual(response.status_code, 200)
+            self.assertIn('TITLEBBB', body, msg='the panel must list the widgets of the row of the greatest id')
+            self.assertNotIn('TITLEAAA', body, msg='the panel must not list the widgets of the older row')
+
+    def test_saving_a_key_with_two_rows_updates_all_of_them(self):
+        """AC-9083-4: ``settings/user`` updates every row of the key and answers 200 with an empty body."""
+        old, new = self._repeat('legacy-key', ['old', 'new'])
+        intruder = UserSettings.objects.create(user=self.other, key='legacy-key', value='keep')
+        response = self._browser().post(SETTINGS_URL, {'key': 'legacy-key', 'value': 'saved'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b'')
+        old.refresh_from_db()
+        new.refresh_from_db()
+        intruder.refresh_from_db()
+        self.assertEqual((old.value, new.value), ('saved', 'saved'), msg='both rows of the key must be updated')
+        self.assertEqual(intruder.value, 'keep', msg='the row of another user must not change')
+
+    def test_a_new_widget_and_a_removed_one_edit_the_row_of_the_greatest_id(self):
+        """AC-9083-10: with two rows of the position the new widget and the removal change only the greater id."""
+        with self.subTest(point='new widget'):
+            self._fresh()
+            old, new = self._repeat(POS_KEY, ['7,6', '9,8'])
+            widget = UserWidget(user=self.owner, page_id='home', widget_type='html',
+                                value=json.dumps({'title': 'NEW', 'content': 'new'}))
+            widget.save()
+            old.refresh_from_db()
+            new.refresh_from_db()
+            self.assertEqual(new.value, f'{widget.pk},9,8', msg='the id of the new widget goes in front of the greater row')
+            self.assertEqual(old.value, '7,6', msg='the older row must not change')
+        with self.subTest(point='removed widget'):
+            self._fresh()
+            widget, kept = self._widget('DELETED'), self._widget('KEPT')
+            old, new = self._repeat(POS_KEY, [f'{kept.pk},{widget.pk}', f'{kept.pk},{widget.pk}'])
+            response = self._browser().post(f'{WIDGETS_URL}{widget.pk}/delete/', {})
+            self.assertEqual(response.status_code, 302)
+            self.assertFalse(UserWidget.objects.filter(pk=widget.pk).exists())
+            old.refresh_from_db()
+            new.refresh_from_db()
+            self.assertEqual(new.value, str(kept.pk), msg='the id of the removed widget leaves the greater row')
+            self.assertEqual(old.value, f'{kept.pk},{widget.pk}', msg='the older row must not change')
