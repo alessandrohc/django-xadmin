@@ -735,7 +735,13 @@ class RevisionView(BaseRevisionView):
 
 		self.detail = self.get_model_view(DetailAdminView, self.model, object_id)
 		self.org_obj = self.detail.obj
-		self.version = get_object_or_404(Version, pk=version_id, object_id=smart_str(self.org_obj.pk))
+		# só as versões do objeto da rota (#9002): filtrar só por object_id deixava passar a versão de outro
+		# modelo com o mesmo pk; o modelo sem histórico no reversion levanta RegistrationError e não tem versão
+		try:
+			versions = Version.objects.get_for_object(self.org_obj)
+		except RegistrationError:
+			raise Http404
+		self.version = get_object_or_404(versions, pk=version_id)
 
 		self.prepare_form()
 
