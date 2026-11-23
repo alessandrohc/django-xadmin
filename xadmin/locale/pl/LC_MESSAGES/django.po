@@ -90,33 +90,9 @@ msgstr ""
 "Twój adres e-mail nie jest Twoją nazwą użytkownika. Zamiast tego spróbuj "
 "'%s'."
 
-#: models.py:48
-msgid "Title"
-msgstr "Tytuł"
-
 #: models.py:49 models.py:88 models.py:107 models.py:149
 msgid "user"
 msgstr "użytkownik"
-
-#: models.py:50
-msgid "Url Name"
-msgstr "Nazwa Url"
-
-#: models.py:52
-msgid "Query String"
-msgstr "Tekst wyszukiwania"
-
-#: models.py:53
-msgid "Is Shared"
-msgstr "Jest współdzielony"
-
-#: models.py:66 plugins/bookmark.py:50 plugins/bookmark.py:180
-msgid "Bookmark"
-msgstr "Zakładka"
-
-#: models.py:67
-msgid "Bookmarks"
-msgstr "Zakładki"
 
 #: models.py:89
 msgid "Settings Key"
@@ -363,77 +339,10 @@ msgstr "Z powodzeniem zmieniono %(count)d %(items)s."
 msgid "Batch change %s"
 msgstr "Zmiana grupowa %s"
 
-#: plugins/bookmark.py:173
-msgid "bookmark"
-msgstr "zakładka"
-
-#: plugins/bookmark.py:176
-msgid "Bookmark Widget, can show user's bookmark list data in widget."
-msgstr "Widget zakładek, pozwala pokazać dane dla zakładki w widgecie."
-
-#: plugins/chart.py:25
-msgid "Show models simple chart."
-msgstr "Pokaż prosty wykres dla modelu."
-
-#: plugins/chart.py:51
-#, python-format
-msgid "%s Charts"
-msgstr "%s Wykresy"
-
-#: plugins/comments.py:33
-msgid "Metadata"
-msgstr "Metadane"
-
-#: plugins/comments.py:60
-msgid "flagged"
-msgid_plural "flagged"
-msgstr[0] "oflagowany"
-msgstr[1] "oflagowane"
-msgstr[2] "oflagowanych"
-
-#: plugins/comments.py:61
-msgid "Flag selected comments"
-msgstr "Oflaguj zaznaczony komentarz"
-
-#: plugins/comments.py:66
-msgid "approved"
-msgid_plural "approved"
-msgstr[0] "zatwierdzony"
-msgstr[1] "zatwierdzone"
-msgstr[2] "zatwierdzonych"
-
-#: plugins/comments.py:67
-msgid "Approve selected comments"
-msgstr "Zatwierdź zaznaczony komentarz"
-
-#: plugins/comments.py:72
-msgid "removed"
-msgid_plural "removed"
-msgstr[0] "usunięty"
-msgstr[1] "usunięte"
-msgstr[2] "usuniętych"
-
-#: plugins/comments.py:73
-msgid "Remove selected comments"
-msgstr "Usuń zaznaczone komentarze"
-
-#: plugins/comments.py:86
-#, python-format
-msgid "1 comment was successfully %(action)s."
-msgid_plural "%(count)s comments were successfully %(action)s."
-msgstr[0] "1 komentarz został z powodzeniem %(action)s."
-msgstr[1] "%(count)s komentarze zostało z powodzeniem %(action)s."
-msgstr[2] "%(count)s komentarzy zostało z powodzeniem %(action)s."
-
 #: plugins/details.py:52 views/list.py:578
 #, python-format
 msgid "Details of %s"
 msgstr "Szczegóły %s"
-
-#: plugins/editable.py:46
-#, python-format
-msgid "Enter %s"
-msgstr "Wejdz w %s"
 
 #: plugins/editable.py:73 views/dashboard.py:649 views/delete.py:27
 #: views/detail.py:145 views/edit.py:454
@@ -470,14 +379,6 @@ msgstr "Ściągnij"
 msgid "Change:"
 msgstr "Zmień:"
 
-#: plugins/layout.py:16
-msgid "Table"
-msgstr "Tabela"
-
-#: plugins/layout.py:22
-msgid "Thumbnails"
-msgstr "Miniaturki"
-
 #: plugins/passwords.py:64
 msgid "Forgotten your password or username?"
 msgstr "Zapomniałeś swojego hasła lub loginu ?"
@@ -486,10 +387,6 @@ msgstr "Zapomniałeś swojego hasła lub loginu ?"
 #, python-format
 msgid "Create New %s"
 msgstr "Utwórz nowy %s"
-
-#: plugins/relate.py:104
-msgid "Related Objects"
-msgstr "Powiązane obiekty"
 
 #: plugins/relfield.py:29 plugins/topnav.py:38
 #, python-format
@@ -828,34 +725,6 @@ msgstr "Następny krok"
 msgid "Save"
 msgstr "Zapisz"
 
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:7
-msgid "Clean Bookmarks"
-msgstr "Wyczyść zakłądki"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:18
-msgid "No Bookmarks"
-msgstr "Brak zakładek"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:22
-msgid "New Bookmark"
-msgstr "Nowa zakładka"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:26
-msgid "Save current page as Bookmark"
-msgstr "Zapisz obecną stronę jako zakładkę"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:32
-msgid "Enter bookmark title"
-msgstr "Wprowadź tytuł zakładki"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Waiting"
-msgstr "Oczekuje"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Save Bookmark"
-msgstr "Zapisz zakładkę"
-
 #: templates/xadmin/blocks/model_list.nav_menu.filters.html:4
 msgid "Filters"
 msgstr "Filtry"
@@ -876,10 +745,6 @@ msgstr "Wybierz wszystkie %(total_count)s %(model_name)s"
 #: templates/xadmin/blocks/model_list.results_bottom.actions.html:20
 msgid "Clear selection"
 msgstr "Wyczyść wybór"
-
-#: templates/xadmin/blocks/model_list.results_top.charts.html:4
-msgid "Charts"
-msgstr "Wykresy"
 
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:4
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:8
@@ -907,10 +772,6 @@ msgstr "Eksportuj wszystkie dane."
 #: templates/xadmin/widgets/base.html:41
 msgid "Close"
 msgstr "Zamknij"
-
-#: templates/xadmin/blocks/model_list.top_toolbar.layouts.html:4
-msgid "Layout"
-msgstr "Układ graficzny"
 
 #: templates/xadmin/blocks/model_list.top_toolbar.refresh.html:8
 msgid "Clean Refresh"

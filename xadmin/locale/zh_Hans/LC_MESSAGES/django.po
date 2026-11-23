@@ -90,33 +90,9 @@ msgstr "请重新登录，因为你的会话已经过期。"
 msgid "Your e-mail address is not your username. Try '%s' instead."
 msgstr "你的 e-mail 地址不是你的用户名。换 '%s' 试试。"
 
-#: .\models.py:46
-msgid "Title"
-msgstr "标题"
-
 #: .\models.py:47 .\models.py:87 .\models.py:107 .\models.py:151
 msgid "user"
 msgstr "用户"
-
-#: .\models.py:48
-msgid "Url Name"
-msgstr "URL名字"
-
-#: .\models.py:50
-msgid "Query String"
-msgstr "Query参数"
-
-#: .\models.py:51
-msgid "Is Shared"
-msgstr "是否共享"
-
-#: .\models.py:64 .\plugins\bookmark.py:59 .\plugins\bookmark.py:194
-msgid "Bookmark"
-msgstr "书签"
-
-#: .\models.py:65
-msgid "Bookmarks"
-msgstr "书签"
 
 #: .\models.py:88
 msgid "Settings Key"
@@ -349,69 +325,10 @@ msgstr "成功修改了 %(count)d 个 %(items)s"
 msgid "Batch change %s"
 msgstr "批量修改 %s"
 
-#: .\plugins\bookmark.py:187
-msgid "bookmark"
-msgstr "书签"
-
-#: .\plugins\bookmark.py:190
-msgid "Bookmark Widget, can show user's bookmark list data in widget."
-msgstr "书签组件，展示用户书签页内容。"
-
-#: .\plugins\chart.py:24
-msgid "Show models simple chart."
-msgstr "展示简单数据图表"
-
-#: .\plugins\chart.py:50
-#, python-format
-msgid "%s Charts"
-msgstr "%s图表"
-
-#: .\plugins\comments.py:33
-msgid "Metadata"
-msgstr ""
-
-#: .\plugins\comments.py:60
-msgid "flagged"
-msgid_plural "flagged"
-msgstr[0] ""
-
-#: .\plugins\comments.py:61
-msgid "Flag selected comments"
-msgstr ""
-
-#: .\plugins\comments.py:66
-msgid "approved"
-msgid_plural "approved"
-msgstr[0] ""
-
-#: .\plugins\comments.py:67
-msgid "Approve selected comments"
-msgstr ""
-
-#: .\plugins\comments.py:72
-msgid "removed"
-msgid_plural "removed"
-msgstr[0] "删除"
-
-#: .\plugins\comments.py:73
-msgid "Remove selected comments"
-msgstr "恢复删除的%(name)s"
-
-#: .\plugins\comments.py:86
-#, python-format
-msgid "1 comment was successfully %(action)s."
-msgid_plural "%(count)s comments were successfully %(action)s."
-msgstr[0] ""
-
 #: .\plugins\details.py:52 .\views\list.py:577
 #, python-format
 msgid "Details of %s"
 msgstr "%s详情"
-
-#: .\plugins\editable.py:46
-#, python-format
-msgid "Enter %s"
-msgstr "输入%s"
 
 #: .\plugins\editable.py:73 .\views\dashboard.py:652 .\views\delete.py:28
 #: .\views\detail.py:145 .\views\edit.py:460
@@ -485,14 +402,6 @@ msgstr "更新"
 msgid "You must select an export format."
 msgstr "必须选择一种导入格式"
 
-#: .\plugins\layout.py:16
-msgid "Table"
-msgstr "表格"
-
-#: .\plugins\layout.py:22
-msgid "Thumbnails"
-msgstr "图标"
-
 #: .\plugins\passwords.py:62
 msgid "Forgotten your password or username?"
 msgstr "忘记了您的密码或用户名？"
@@ -501,10 +410,6 @@ msgstr "忘记了您的密码或用户名？"
 #, python-format
 msgid "Create New %s"
 msgstr "创建新的 %s"
-
-#: .\plugins\relate.py:105
-msgid "Related Objects"
-msgstr "关联数据"
 
 #: .\plugins\relfield.py:29 .\plugins\topnav.py:38
 #, python-format
@@ -824,34 +729,6 @@ msgstr "下一步"
 msgid "Save"
 msgstr "保存"
 
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:7
-msgid "Clean Bookmarks"
-msgstr "清除书签"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:18
-msgid "No Bookmarks"
-msgstr "没有书签"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:22
-msgid "New Bookmark"
-msgstr "新建书签"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:26
-msgid "Save current page as Bookmark"
-msgstr "将当前页面保存为书签"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:32
-msgid "Enter bookmark title"
-msgstr "输入书签标题"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:33
-msgid "Waiting"
-msgstr "请稍侯"
-
-#: .\templates\xadmin\blocks\model_list.nav_menu.bookmarks.html:33
-msgid "Save Bookmark"
-msgstr "保存书签"
-
 #: .\templates\xadmin\blocks\model_list.nav_menu.filters.html:4
 msgid "Filters"
 msgstr "过滤器"
@@ -872,10 +749,6 @@ msgstr "选中所有的 %(total_count)s 个 %(model_name)s"
 #: .\templates\xadmin\blocks\model_list.results_bottom.actions.html:20
 msgid "Clear selection"
 msgstr "清除选中"
-
-#: .\templates\xadmin\blocks\model_list.results_top.charts.html:4
-msgid "Charts"
-msgstr "图表"
 
 #: .\templates\xadmin\blocks\model_list.top_toolbar.exports.html:4
 #: .\templates\xadmin\blocks\model_list.top_toolbar.exports.html:8
@@ -922,10 +795,6 @@ msgstr "导出所选择数据"
 #: .\templates\xadmin\blocks\model_list.top_toolbar.importexport.export.html:36
 msgid "Export header only."
 msgstr "仅导出表头"
-
-#: .\templates\xadmin\blocks\model_list.top_toolbar.layouts.html:4
-msgid "Layout"
-msgstr "布局"
 
 #: .\templates\xadmin\blocks\model_list.top_toolbar.refresh.html:8
 msgid "Clean Refresh"

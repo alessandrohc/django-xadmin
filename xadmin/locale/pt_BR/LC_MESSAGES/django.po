@@ -110,35 +110,10 @@ msgstr ""
 msgid "Please log in again, because your session has expired."
 msgstr "Por favor faça login novamente, porque a sua sessão expirou."
 
-#: xadmin/models.py:60
-msgid "Title"
-msgstr "Título"
-
 #: xadmin/models.py:61 xadmin/models.py:101 xadmin/models.py:120
 #: xadmin/models.py:163
 msgid "user"
 msgstr "Usuário"
-
-#: xadmin/models.py:62
-msgid "Url Name"
-msgstr "Nome da Url"
-
-#: xadmin/models.py:64
-msgid "Query String"
-msgstr "String de Consulta"
-
-#: xadmin/models.py:65
-msgid "Is Shared"
-msgstr "É Compartilhada"
-
-#: xadmin/models.py:78 xadmin/plugins/bookmark.py:56
-#: xadmin/plugins/bookmark.py:192
-msgid "Bookmark"
-msgstr "Favorito"
-
-#: xadmin/models.py:79
-msgid "Bookmarks"
-msgstr "Favoritos"
 
 #: xadmin/models.py:102
 msgid "Settings Key"
@@ -390,74 +365,10 @@ msgstr "Alterado com sucesso %(count)d %(items)s."
 msgid "Batch change %s"
 msgstr "Lote alterado %s"
 
-#: xadmin/plugins/bookmark.py:185
-msgid "bookmark"
-msgstr "Favorito"
-
-#: xadmin/plugins/bookmark.py:188
-msgid "Bookmark Widget, can show user's bookmark list data in widget."
-msgstr ""
-"Widget de Marcador, pode mostrar a lista de marcadores do usuário no widget"
-
-#: xadmin/plugins/chart.py:23
-msgid "Show models simple chart."
-msgstr "Mostrar modelos gráfico simples."
-
-#: xadmin/plugins/chart.py:49
-#, python-format
-msgid "%s Charts"
-msgstr "%s Gráficos"
-
-#: xadmin/plugins/comments.py:34
-msgid "Metadata"
-msgstr "Metadados"
-
-#: xadmin/plugins/comments.py:61
-msgid "flagged"
-msgid_plural "flagged"
-msgstr[0] "Marcado"
-msgstr[1] "Marcados"
-
-#: xadmin/plugins/comments.py:63
-msgid "Flag selected comments"
-msgstr "Marcar comentários selecionados"
-
-#: xadmin/plugins/comments.py:68
-msgid "approved"
-msgid_plural "approved"
-msgstr[0] "Aprovado"
-msgstr[1] "Aprovados"
-
-#: xadmin/plugins/comments.py:70
-msgid "Approve selected comments"
-msgstr "Aprovar comentários selecionados"
-
-#: xadmin/plugins/comments.py:75
-msgid "removed"
-msgid_plural "removed"
-msgstr[0] "removido"
-msgstr[1] "removidos"
-
-#: xadmin/plugins/comments.py:77
-msgid "Remove selected comments"
-msgstr "Remover comentário selecionado"
-
-#: xadmin/plugins/comments.py:90
-#, python-format
-msgid "1 comment was successfully %(action)s."
-msgid_plural "%(count)s comments were successfully %(action)s."
-msgstr[0] "1 comentários foi %(action)s com sucesso."
-msgstr[1] "%(count)s comentários foram %(action)s com sucesso"
-
 #: xadmin/plugins/details.py:48 xadmin/views/list.py:609
 #, python-format
 msgid "Details of %s"
 msgstr "Detalhes de %s"
-
-#: xadmin/plugins/editable.py:47
-#, python-format
-msgid "Enter %s"
-msgstr "Entrar %s"
 
 #: xadmin/plugins/editable.py:80 xadmin/views/dashboard.py:671
 #: xadmin/views/delete.py:25 xadmin/views/detail.py:170
@@ -544,14 +455,6 @@ msgstr "Precisa selecionar um formato de exportação."
 #: xadmin/plugins/importexport.py:521
 msgid "You need to select items for export."
 msgstr "Precisa selecionar itens para exportação."
-
-#: xadmin/plugins/layout.py:16
-msgid "Table"
-msgstr "Tabela"
-
-#: xadmin/plugins/layout.py:22
-msgid "Thumbnails"
-msgstr "Miniaturas"
 
 #: xadmin/plugins/passwords.py:24
 #: xadmin/templates/xadmin/auth/password_reset/form.html:16
@@ -936,34 +839,6 @@ msgstr "Gravar e adicionar outro"
 msgid "Save and continue editing"
 msgstr "Gravar e continuar editando"
 
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:11
-msgid "Clean Bookmarks"
-msgstr "Limpar Favoritos"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:26
-msgid "No Bookmarks"
-msgstr "Sem Favoritos"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:32
-msgid "New Bookmark"
-msgstr "Novo Favorito"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:35
-msgid "Save current page as Bookmark"
-msgstr "Marcar a página atual como favorito"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:42
-msgid "Enter bookmark title"
-msgstr "Digite o título do favorito"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:44
-msgid "Waiting"
-msgstr "Aguardando"
-
-#: xadmin/templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:44
-msgid "Save Bookmark"
-msgstr "Marcar Favorito"
-
 #: xadmin/templates/xadmin/blocks/model_list.nav_menu.filters.html:5
 #: xadmin/templates/xadmin/blocks/model_list.nav_menu.filters.html:6
 msgid "Filters"
@@ -985,10 +860,6 @@ msgstr "Selecionar todos %(total_count)s %(model_name)s"
 #: xadmin/templates/xadmin/blocks/model_list.results_bottom.actions.html:23
 msgid "Clear selection"
 msgstr "Limpar Seleção"
-
-#: xadmin/templates/xadmin/blocks/model_list.results_top.charts.html:4
-msgid "Charts"
-msgstr "Gráficos"
 
 #: xadmin/templates/xadmin/blocks/model_list.top_toobar.xversion.recover.html:5
 #: xadmin/templates/xadmin/views/recover_form.html:36
@@ -1046,10 +917,6 @@ msgstr "Exportar dados selecionados."
 #: xadmin/templates/xadmin/blocks/model_list.top_toolbar.importexport.export.html:73
 msgid "Export header only."
 msgstr "Exportar somente cabeçalhos da tabela."
-
-#: xadmin/templates/xadmin/blocks/model_list.top_toolbar.layouts.html:4
-msgid "Layout"
-msgstr "Layout"
 
 #: xadmin/templates/xadmin/blocks/model_list.top_toolbar.refresh.html:9
 msgid "Clean Refresh"
@@ -1267,10 +1134,6 @@ msgstr "Cancelar"
 #: xadmin/templates/xadmin/includes/submit_line.html:32
 msgid "Save as new"
 msgstr "Gravar como novo"
-
-#: xadmin/templates/xadmin/plugins/related_links.html:3
-msgid "Related Objects"
-msgstr "Objetos Relacionados"
 
 #: xadmin/templates/xadmin/views/app_index.html:14
 #, python-format
