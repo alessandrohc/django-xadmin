@@ -12,7 +12,7 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.sites import site
 from xadmin.views import BaseAdminPlugin  # noqa: F401  (keeps import order honest)
 
-from test_xadmin.fixtureapp.models import Author, Book, Ranked, Tag
+from test_xadmin.fixtureapp.models import Author, Book, Ranked, RankedUuid, Tag
 from test_xadmin.fixtureapp.resources import BookResource
 
 
@@ -75,7 +75,14 @@ class TagAdmin:
     actions = [MarkSeenAction]
 
 
+class RankedUuidAdmin:
+    list_display = ('name', 'position')
+    # the sortable list on a UUID key: the ``save-order`` route converts the ids with the key field (#8986)
+    list_order_field = 'position'
+
+
 site.register(Author, AuthorAdmin)
 site.register(Book, BookAdmin)
 site.register(Ranked, RankedAdmin)
 site.register(Tag, TagAdmin)
+site.register(RankedUuid, RankedUuidAdmin)

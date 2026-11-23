@@ -73,6 +73,11 @@ class SaveOrderView(ModelAdminView):
 	@csrf_protect_m
 	@transaction.atomic
 	def post(self, request):
+		# a rota é registrada para todo modelo (no fim do arquivo), mas só o admin com `list_order_field`
+		# ordena (#8986): o mesmo teste do SortableListPlugin.init_request; vem antes da leitura e da
+		# validação dos ids, e o `Http404` não tem mensagem, como o dos ids logo abaixo
+		if not getattr(self, 'list_order_field', None):
+			raise Http404
 		order_objs = request.POST.getlist("order[]")
 		# The ids come straight from the POST (#8930). Every one is converted by the key field
 		# before anything is saved: the 400 is a plain return, which does not roll the atomic

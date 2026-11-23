@@ -75,3 +75,20 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RankedUuid(models.Model):
+    """UUID key with an order column: the sortable list of a model whose key is not an integer (#8986).
+
+    ``Ranked`` covers the integer key and ``Tag`` the UUID key without sorting; this is the
+    one that has both, so the ``save-order`` route can be exercised with UUID ids.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    position = models.IntegerField(default=0)
+
+    class Meta:
+        app_label = 'xadmin_fixture'
+
+    def __str__(self):
+        return self.name
