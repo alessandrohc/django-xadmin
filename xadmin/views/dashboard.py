@@ -157,6 +157,14 @@ class UserWidgetAdmin:
 site.register(UserWidget, UserWidgetAdmin)
 
 
+class UnknownWidgetType(KeyError):
+	"""O tipo de widget que nenhum `@widget_manager.register` registrou (o de uma linha salva por um plugin que saiu do pacote).
+
+	É um `KeyError` de propósito: o `get_widgets` a captura como `LookupError` para apagar o widget órfão (AC-9054-8 e -15), e o
+	`Dashboard.post` a captura sozinha, sem engolir o `PermissionDenied` nem o `WidgetDataError` (#9088).
+	"""
+
+
 class WidgetManager:
 	_widgets = None
 
@@ -168,7 +176,10 @@ class WidgetManager:
 		return widget_class
 
 	def get(self, name):
-		return self._widgets[name]
+		try:
+			return self._widgets[name]
+		except KeyError:
+			raise UnknownWidgetType(name) from None
 
 	def get_widgets(self, page_id):
 		return self._widgets.values()
@@ -685,6 +696,11 @@ class Dashboard(CommAdminView):
 				except WidgetDataError:
 					# os dados vêm do POST (#8987): o formulário do tipo do widget os recusou
 					return HttpResponseBadRequest()
+				except UnknownWidgetType:
+					# o tipo salvo no widget deixou de existir no pacote (o `bookmark` e o `chart` do #9054, por exemplo): não há
+					# o que gravar. Responde a página da rota como o GET, que o `get_widgets` monta sem o widget (e apaga o que a
+					# posição lista) (#9088)
+					return self.get(request)
 				if widget is None:
 					# not a widget of this user on this page: unknown, or somebody else's
 					raise Http404
