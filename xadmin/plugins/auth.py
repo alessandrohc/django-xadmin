@@ -196,9 +196,18 @@ class ChangePasswordView(ModelAdminView):
 	def get_form(self, *args, **kwargs):
 		return self.change_password_form(*args, **kwargs)
 
+	def log_password_change(self):
+		# #9134: a troca de senha deixa uma entrada no log de auditoria, como a edição do usuário
+		# (views/edit.py:317). O objeto é o usuário cuja senha mudou (self.obj; na rota da própria senha,
+		# o próprio ator) e a mensagem é um texto fixo: nunca a senha nem o valor guardado dela (o hash).
+		# Sem try: o AuditLog._log já engole a falha da gravação da entrada (auditlog.py:25-34) e a troca
+		# já foi gravada pelo form.save() que vem antes.
+		self.log('update', _('Changed %s.') % 'password', self.obj)
+
 	@filter_hook
 	def form_valid(self, form):
 		form.save()
+		self.log_password_change()
 		self.message_user(_('Password changed successfully.'), 'success')
 		return HttpResponseRedirect(self.model_admin_url('change', self.obj.pk))
 
@@ -289,6 +298,7 @@ class ChangeAccountPasswordView(ChangePasswordView):
 	@filter_hook
 	def form_valid(self, form):
 		form.save()
+		self.log_password_change()
 		self.message_user(_('Password changed successfully.'), 'success')
 		return HttpResponseRedirect(self.get_admin_url('index'))
 
