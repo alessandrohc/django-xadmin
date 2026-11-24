@@ -176,7 +176,7 @@ class RecoverScopeTests(TestCase):
                 self.assertFalse(Author.objects.filter(pk=self.gone_pk).exists(), msg='the Author must stay deleted')
 
     def test_without_permission_answers_403(self):
-        """AC-9001-7: sem a permissao de adicionar/alterar/excluir dá 403, tambem com versao que nao existe."""
+        """AC-9104-4 (controle): sem a permissao de adicionar/alterar/excluir dá 403, tambem com versao que nao existe."""
         for label, version_pk in (('listed version', self._listed().pk), ('missing version', 987654321)):
             for method in ('get', 'post'):
                 with self.subTest(version=label, method=method):
@@ -184,7 +184,7 @@ class RecoverScopeTests(TestCase):
                     self.assertEqual(response.status_code, 403)
 
     def test_missing_numeric_version_answers_404(self):
-        """AC-9001-8: um numero que nenhuma versao tem dá 404 no GET e no POST."""
+        """AC-9104-2 (controle): um numero que nenhuma versao tem dá 404 no GET e no POST."""
         for method in ('get', 'post'):
             with self.subTest(method=method):
                 response = getattr(self._client_for(self.editor), method)(self._url(987654321))

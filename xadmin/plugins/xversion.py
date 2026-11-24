@@ -15,7 +15,7 @@ import re
 from crispy_forms.utils import TEMPLATE_PACK
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied, FieldDoesNotExist
+from django.core.exceptions import BadRequest, PermissionDenied, FieldDoesNotExist
 from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
@@ -689,6 +689,24 @@ class BaseRevisionView(ModelFormAdminView):
 		            self.has_change_permission() and
 		            self.has_delete_permission())
 
+	def get_version(self, versions, version_id):
+		"""A versão da rota dentro de `versions`: 400 se a chave da `Version` não converte o `version_id`, 404 se nenhuma a tem.
+
+		O `version_id` vem cru da rota (#9104): o que a chave não converte (`abc`, `1.5`, o byte NUL) estourava
+		`ValueError` no ORM e a rota respondia 500. O `init_request` roda no `setup`, antes do `dispatch`
+		(`xadmin/views/base.py:395-407`), então não devolve resposta: só levanta, e o 400 é um `BadRequest`.
+		Chame depois dos portões (permissão, objeto da rota, modelo sem histórico no reversion): o 403 e os 404
+		deles vêm antes do 400. O número que a chave converte e nenhuma versão tem, inclusive o fora do intervalo
+		do banco, passa daqui e dá o 404 do `get_object_or_404`.
+		"""
+		try:
+			parse_pk(Version, version_id)
+		except ValueError:
+			# mensagem interna, sem o valor recebido (o Django já loga o caminho da requisição, com o valor, como no
+			# 404: `django/core/handlers/exception.py:105-110`, Django 5.2.19)
+			raise BadRequest('Invalid version id') from None
+		return get_object_or_404(versions, pk=version_id)
+
 	@filter_hook
 	def get_revision(self):
 		return self.version.field_dict
@@ -741,7 +759,7 @@ class RevisionView(BaseRevisionView):
 			versions = Version.objects.get_for_object(self.org_obj)
 		except RegistrationError:
 			raise Http404
-		self.version = get_object_or_404(versions, pk=version_id)
+		self.version = self.get_version(versions, version_id)
 
 		self.prepare_form()
 
@@ -806,7 +824,7 @@ class RecoverView(BaseRevisionView):
 			deleted = Version.objects.get_deleted(self.model)
 		except RegistrationError:
 			raise Http404
-		self.version = get_object_or_404(deleted, pk=version_id)
+		self.version = self.get_version(deleted, version_id)
 		self.org_obj = self.version._object_version.object
 
 		self.prepare_form()
