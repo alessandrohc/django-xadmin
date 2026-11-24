@@ -799,7 +799,14 @@ class RecoverView(BaseRevisionView):
 		if not self.has_revision_permission():
 			raise PermissionDenied
 
-		self.version = get_object_or_404(Version, pk=version_id)
+		# só o que a lista de recuperação oferece (#9001): a última versão de cada objeto apagado deste modelo;
+		# a de objeto vivo, de outro modelo ou antiga de um apagado é 404; o modelo sem histórico no
+		# reversion levanta RegistrationError e não tem versão de ninguém
+		try:
+			deleted = Version.objects.get_deleted(self.model)
+		except RegistrationError:
+			raise Http404
+		self.version = get_object_or_404(deleted, pk=version_id)
 		self.org_obj = self.version._object_version.object
 
 		self.prepare_form()
