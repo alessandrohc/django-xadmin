@@ -5,11 +5,11 @@ import json
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import DEFAULT_DB_ALIAS, connections, models
+from django.db import DEFAULT_DB_ALIAS, connections, models, transaction
 from django.db.models.base import ModelBase
 from django.db.models.signals import post_migrate
-from django.urls.base import reverse
 from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.encoding import smart_str
@@ -81,29 +81,6 @@ def add_view_permissions(sender, **kwargs):
 post_migrate.connect(add_view_permissions, dispatch_uid="xadmin_add_view_permissions")
 
 
-class Bookmark(models.Model):
-	title = models.CharField(_('Title'), max_length=128)
-	user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name=_("user"), blank=True, null=True)
-	url_name = models.CharField(_('Url Name'), max_length=64)
-	content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-	query = models.CharField(_('Query String'), max_length=1000, blank=True)
-	is_share = models.BooleanField(_('Is Shared'), default=False)
-
-	@property
-	def url(self):
-		base_url = reverse(self.url_name)
-		if self.query:
-			base_url = base_url + '?' + self.query
-		return base_url
-
-	def __str__(self):
-		return self.title
-
-	class Meta:
-		verbose_name = _('Bookmark')
-		verbose_name_plural = _('Bookmarks')
-
-
 class JSONEncoder(DjangoJSONEncoder):
 
 	def default(self, o):
@@ -133,6 +110,75 @@ class UserSettings(models.Model):
 	def set_json(self, obj):
 		self.value = json.dumps(obj, cls=JSONEncoder, ensure_ascii=False)
 
+	@classmethod
+	def get_latest(cls, user, key):
+		# nada no banco garante uma só linha por (usuário, chave) (#9083): duas requisições que não acharam a linha podem
+		# criar duas, e os bancos legados já as têm (#8983). Com mais de uma vale a última gravada (a de maior id), a mesma
+		# que o `get_widgets` do painel lê. Levanta `DoesNotExist` como o `get` que substitui, então quem o chama mantém o
+		# `except` que já tinha.
+		row = cls.objects.filter(user=user, key=key).order_by('-pk').first()
+		if row is None:
+			raise cls.DoesNotExist
+		return row
+
+	@classmethod
+	def _lock_user_row(cls, user):
+		"""Trava a linha do usuário até o fim do `atomic` em que é chamada (só vale dentro de um)."""
+		user_model = cls._meta.get_field('user').related_model
+		queryset = user_model._default_manager.filter(pk=user.pk)
+		# no PostgreSQL `FOR NO KEY UPDATE` não conflita com a trava compartilhada que a inserção de uma filha pede; o MySQL
+		# levanta `NotSupportedError` com `no_key` (django/db/models/sql/compiler.py:877), então só onde o backend o tem
+		no_key = connections[queryset.db].features.has_select_for_no_key_update
+		# o `list` é o que executa a consulta e pede a trava; num banco sem `select_for_update` (SQLite, SQL Server) o Django a ignora
+		list(queryset.select_for_update(no_key=no_key))
+
+	@classmethod
+	def save_for_user(cls, user, key, value):
+		"""Grava o valor da chave do usuário: atualiza as linhas que existem ou cria uma, sem criar duas (#9083).
+
+		Não há restrição única no banco (os bancos legados não podem rodar a migração), então a regra «uma linha por
+		usuário e chave» vale aqui: quem acha a linha só a atualiza, sem trava; quem não acha abre um `atomic`, trava a linha
+		do usuário como primeiro comando do bloco, relê a chave com uma leitura travada (no `REPEATABLE READ` do MySQL uma leitura
+		comum não enxergaria a linha que a outra requisição acabou de gravar) e só então cria. Com mais de uma linha da chave
+		(duplicata de antes) atualiza todas. Onde o backend não tem `select_for_update` (SQLite, SQL Server) a trava não existe
+		e a leitura tolerante (`get_latest`) é a defesa.
+		"""
+		rows = list(cls.objects.filter(user=user, key=key))
+		if rows:
+			cls._update_rows(rows, value)
+			return
+		with transaction.atomic():
+			cls._lock_user_row(user)
+			rows = list(cls.objects.select_for_update().filter(user=user, key=key))
+			if rows:
+				cls._update_rows(rows, value)
+			else:
+				cls.objects.create(user=user, key=key, value=value)
+
+	@staticmethod
+	def _update_rows(rows, value):
+		for row in rows:
+			# `save()` e não `update()`: mantém os sinais do model
+			row.value = value
+			row.save()
+
+	def clean(self):
+		super().clean()
+		# a recusa do par (usuário, chave) que já existe, que antes vinha da validação da restrição (#8982), agora é daqui:
+		# vale para a linha nova e para a troca do par, e não para a linha que já era duplicata e é salva sem mudar o par
+		# (#9083). Sem usuário ou chave (falharam na validação do campo) não há par a comparar.
+		if not self.user_id or not self.key:
+			return
+		manager = type(self)._default_manager
+		others = manager.filter(user_id=self.user_id, key=self.key)
+		if self.pk is not None:
+			others = others.exclude(pk=self.pk)
+			stored = manager.filter(pk=self.pk).values_list('user_id', 'key').first()
+			if stored == (self.user_id, self.key):
+				return
+		if others.exists():
+			raise ValidationError(self.unique_error_message(type(self), ('user', 'key')))
+
 	def __str__(self):
 		return "%s %s" % (self.user, self.key)
 
@@ -161,7 +207,7 @@ class UserWidget(models.Model):
 		super(UserWidget, self).save(*args, **kwargs)
 		if created:
 			try:
-				portal_pos = UserSettings.objects.get(
+				portal_pos = UserSettings.get_latest(
 					user=self.user, key="dashboard:%s:pos" % self.page_id)
 				portal_pos.value = "%s,%s" % (self.pk, portal_pos.value) if portal_pos.value else self.pk
 				portal_pos.save()

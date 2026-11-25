@@ -1,7 +1,7 @@
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.contrib.auth.views import LoginView as AuthLoginView
 from django.contrib.auth.views import LogoutView as logout
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.cache import never_cache
@@ -26,12 +26,16 @@ class UserSettingView(BaseAdminView):
 
 	@method_decorator(never_cache)
 	def post(self, request):
-		key = request.POST['key']
-		val = request.POST['value']
-		us, created = UserSettings.objects.get_or_create(
-			user=self.user, key=key)
-		us.value = val
-		us.save()
+		key = request.POST.get('key')
+		val = request.POST.get('value')
+		# Both come straight from the POST (#8930): a missing one, or a key longer than the
+		# column, is a 400. The empty value is valid, as it always was.
+		if key is None or val is None or len(key) > UserSettings._meta.get_field('key').max_length:
+			return HttpResponseBadRequest()
+		# uma só linha por (usuário, chave), sem restrição no banco (#9083): `save_for_user` atualiza as linhas que a chave
+		# tem (mais de uma num banco legado, #8930) ou cria uma, travando antes a linha do usuário (duas requisições de uma
+		# chave nova se enfileiram, e a segunda atualiza a linha da primeira: a última gravação vence)
+		UserSettings.save_for_user(self.user, key, val)
 		return HttpResponse('')
 
 

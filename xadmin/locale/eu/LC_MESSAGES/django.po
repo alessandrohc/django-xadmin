@@ -90,33 +90,9 @@ msgstr ""
 "Zure e-posta helbidea ez da zure erabiltzaile izena. Horren ordez saiatu "
 "'%s'."
 
-#: models.py:48
-msgid "Title"
-msgstr "Izenburua"
-
 #: models.py:49 models.py:88 models.py:107 models.py:149
 msgid "user"
 msgstr ""
-
-#: models.py:50
-msgid "Url Name"
-msgstr "Url Izena"
-
-#: models.py:52
-msgid "Query String"
-msgstr "Kontsulta Katea"
-
-#: models.py:53
-msgid "Is Shared"
-msgstr "Partekatua da."
-
-#: models.py:66 plugins/bookmark.py:50 plugins/bookmark.py:180
-msgid "Bookmark"
-msgstr "Laster-marketara gehitu"
-
-#: models.py:67
-msgid "Bookmarks"
-msgstr "Laster-markak"
 
 #: models.py:89
 msgid "Settings Key"
@@ -361,77 +337,10 @@ msgstr ""
 msgid "Batch change %s"
 msgstr ""
 
-#: plugins/bookmark.py:173
-msgid "bookmark"
-msgstr ""
-
-#: plugins/bookmark.py:176
-msgid "Bookmark Widget, can show user's bookmark list data in widget."
-msgstr ""
-"Laster-marken Widgeta, erabiltzailearen laster-marka zerrenda widgetean "
-"erakutsi dezake."
-
-#: plugins/chart.py:25
-msgid "Show models simple chart."
-msgstr "Erabili modeluen diagrama sinplea."
-
-#: plugins/chart.py:51
-#, python-format
-msgid "%s Charts"
-msgstr "%s Diagrama"
-
-#: plugins/comments.py:33
-msgid "Metadata"
-msgstr ""
-
-#: plugins/comments.py:60
-msgid "flagged"
-msgid_plural "flagged"
-msgstr[0] ""
-msgstr[1] ""
-
-#: plugins/comments.py:61
-msgid "Flag selected comments"
-msgstr ""
-
-#: plugins/comments.py:66
-msgid "approved"
-msgid_plural "approved"
-msgstr[0] ""
-msgstr[1] ""
-
-#: plugins/comments.py:67
-msgid "Approve selected comments"
-msgstr ""
-
-#: plugins/comments.py:72
-#, fuzzy
-msgid "removed"
-msgid_plural "removed"
-msgstr[0] "Ezabatu"
-msgstr[1] "Ezabatu"
-
-#: plugins/comments.py:73
-#, fuzzy
-msgid "Remove selected comments"
-msgstr "Ezabatutako %(name)sa berreskuratu"
-
-#: plugins/comments.py:86
-#, python-format
-msgid "1 comment was successfully %(action)s."
-msgid_plural "%(count)s comments were successfully %(action)s."
-msgstr[0] ""
-msgstr[1] ""
-
 #: plugins/details.py:52 views/list.py:578
 #, python-format
 msgid "Details of %s"
 msgstr "%sren xehetasunak"
-
-#: plugins/editable.py:46
-#, python-format
-msgid "Enter %s"
-msgstr "Sartu %s"
 
 #: plugins/editable.py:73 views/dashboard.py:649 views/delete.py:27
 #: views/detail.py:145 views/edit.py:454
@@ -468,14 +377,6 @@ msgstr "Deskargatu"
 msgid "Change:"
 msgstr "Aldatu:"
 
-#: plugins/layout.py:16
-msgid "Table"
-msgstr ""
-
-#: plugins/layout.py:22
-msgid "Thumbnails"
-msgstr ""
-
 #: plugins/passwords.py:64
 msgid "Forgotten your password or username?"
 msgstr "Zure pasahitza edo erabiltzailea ahaztu duzu?"
@@ -484,10 +385,6 @@ msgstr "Zure pasahitza edo erabiltzailea ahaztu duzu?"
 #, python-format
 msgid "Create New %s"
 msgstr ""
-
-#: plugins/relate.py:104
-msgid "Related Objects"
-msgstr "Erlazionatutako Objetuak"
 
 #: plugins/relfield.py:29 plugins/topnav.py:38
 #, python-format
@@ -823,34 +720,6 @@ msgstr "Ondo pausua"
 msgid "Save"
 msgstr "Gorde"
 
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:7
-msgid "Clean Bookmarks"
-msgstr "Laster-markak Garbitu"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:18
-msgid "No Bookmarks"
-msgstr "Ez dago Laster-markarik"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:22
-msgid "New Bookmark"
-msgstr "Laster-marka Berria"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:26
-msgid "Save current page as Bookmark"
-msgstr "Uneko orria Laster-marka bezala gorde"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:32
-msgid "Enter bookmark title"
-msgstr "Laster-markaren izenburua idatzi"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Waiting"
-msgstr "Itxoiten"
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Save Bookmark"
-msgstr "Laster-marka gorde"
-
 #: templates/xadmin/blocks/model_list.nav_menu.filters.html:4
 msgid "Filters"
 msgstr "Filtroak"
@@ -871,10 +740,6 @@ msgstr "Aukeratu %(total_count)s %(model_name)sak"
 #: templates/xadmin/blocks/model_list.results_bottom.actions.html:20
 msgid "Clear selection"
 msgstr "Aukeraketa garbitu"
-
-#: templates/xadmin/blocks/model_list.results_top.charts.html:4
-msgid "Charts"
-msgstr "Diagramak"
 
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:4
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:8
@@ -902,10 +767,6 @@ msgstr "Data guztiak esportatu."
 #: templates/xadmin/widgets/base.html:41
 msgid "Close"
 msgstr "Itxi"
-
-#: templates/xadmin/blocks/model_list.top_toolbar.layouts.html:4
-msgid "Layout"
-msgstr ""
 
 #: templates/xadmin/blocks/model_list.top_toolbar.refresh.html:8
 msgid "Clean Refresh"

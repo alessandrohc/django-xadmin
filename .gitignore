@@ -49,6 +49,4 @@ xadmin/static/xadmin/package-lock.json
 
 .idea
 *~
-demo_app/data.db
-demo_app/static/
 *.swp

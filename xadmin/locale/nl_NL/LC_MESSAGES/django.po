@@ -85,32 +85,8 @@ msgstr ""
 msgid "Your e-mail address is not your username. Try '%s' instead."
 msgstr ""
 
-#: models.py:48
-msgid "Title"
-msgstr ""
-
 #: models.py:49 models.py:88 models.py:107 models.py:149
 msgid "user"
-msgstr ""
-
-#: models.py:50
-msgid "Url Name"
-msgstr ""
-
-#: models.py:52
-msgid "Query String"
-msgstr ""
-
-#: models.py:53
-msgid "Is Shared"
-msgstr ""
-
-#: models.py:66 plugins/bookmark.py:50 plugins/bookmark.py:180
-msgid "Bookmark"
-msgstr ""
-
-#: models.py:67
-msgid "Bookmarks"
 msgstr ""
 
 #: models.py:89
@@ -345,72 +321,9 @@ msgstr ""
 msgid "Batch change %s"
 msgstr ""
 
-#: plugins/bookmark.py:173
-msgid "bookmark"
-msgstr ""
-
-#: plugins/bookmark.py:176
-msgid "Bookmark Widget, can show user's bookmark list data in widget."
-msgstr ""
-
-#: plugins/chart.py:25
-msgid "Show models simple chart."
-msgstr ""
-
-#: plugins/chart.py:51
-#, python-format
-msgid "%s Charts"
-msgstr ""
-
-#: plugins/comments.py:33
-msgid "Metadata"
-msgstr ""
-
-#: plugins/comments.py:60
-msgid "flagged"
-msgid_plural "flagged"
-msgstr[0] ""
-msgstr[1] ""
-
-#: plugins/comments.py:61
-msgid "Flag selected comments"
-msgstr ""
-
-#: plugins/comments.py:66
-msgid "approved"
-msgid_plural "approved"
-msgstr[0] ""
-msgstr[1] ""
-
-#: plugins/comments.py:67
-msgid "Approve selected comments"
-msgstr ""
-
-#: plugins/comments.py:72
-msgid "removed"
-msgid_plural "removed"
-msgstr[0] ""
-msgstr[1] ""
-
-#: plugins/comments.py:73
-msgid "Remove selected comments"
-msgstr ""
-
-#: plugins/comments.py:86
-#, python-format
-msgid "1 comment was successfully %(action)s."
-msgid_plural "%(count)s comments were successfully %(action)s."
-msgstr[0] ""
-msgstr[1] ""
-
 #: plugins/details.py:52 views/list.py:578
 #, python-format
 msgid "Details of %s"
-msgstr ""
-
-#: plugins/editable.py:46
-#, python-format
-msgid "Enter %s"
 msgstr ""
 
 #: plugins/editable.py:73 views/dashboard.py:649 views/delete.py:27
@@ -448,14 +361,6 @@ msgstr ""
 msgid "Change:"
 msgstr ""
 
-#: plugins/layout.py:16
-msgid "Table"
-msgstr ""
-
-#: plugins/layout.py:22
-msgid "Thumbnails"
-msgstr ""
-
 #: plugins/passwords.py:64
 msgid "Forgotten your password or username?"
 msgstr ""
@@ -463,10 +368,6 @@ msgstr ""
 #: plugins/quickform.py:79
 #, python-format
 msgid "Create New %s"
-msgstr ""
-
-#: plugins/relate.py:104
-msgid "Related Objects"
 msgstr ""
 
 #: plugins/relfield.py:29 plugins/topnav.py:38
@@ -784,34 +685,6 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:7
-msgid "Clean Bookmarks"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:18
-msgid "No Bookmarks"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:22
-msgid "New Bookmark"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:26
-msgid "Save current page as Bookmark"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:32
-msgid "Enter bookmark title"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Waiting"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.nav_menu.bookmarks.html:33
-msgid "Save Bookmark"
-msgstr ""
-
 #: templates/xadmin/blocks/model_list.nav_menu.filters.html:4
 msgid "Filters"
 msgstr ""
@@ -831,10 +704,6 @@ msgstr ""
 
 #: templates/xadmin/blocks/model_list.results_bottom.actions.html:20
 msgid "Clear selection"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.results_top.charts.html:4
-msgid "Charts"
 msgstr ""
 
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:4
@@ -862,10 +731,6 @@ msgstr ""
 #: templates/xadmin/blocks/model_list.top_toolbar.exports.html:46
 #: templates/xadmin/widgets/base.html:41
 msgid "Close"
-msgstr ""
-
-#: templates/xadmin/blocks/model_list.top_toolbar.layouts.html:4
-msgid "Layout"
 msgstr ""
 
 #: templates/xadmin/blocks/model_list.top_toolbar.refresh.html:8

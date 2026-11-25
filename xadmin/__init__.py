@@ -1,5 +1,5 @@
 # Kept in step with setup.py's version by hand; test_packaging pins that they agree.
-VERSION = (4, 2, 2)
+VERSION = (5, 0, 0)
 
 from xadmin.sites import AdminSite, site
 

@@ -11,7 +11,7 @@ from django.contrib.auth.forms import (
 from django.contrib.auth.models import Group, Permission
 from django.core.exceptions import PermissionDenied
 from django.forms import ModelMultipleChoiceField
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.utils.decorators import method_decorator
@@ -196,9 +196,18 @@ class ChangePasswordView(ModelAdminView):
 	def get_form(self, *args, **kwargs):
 		return self.change_password_form(*args, **kwargs)
 
+	def log_password_change(self):
+		# #9134: a troca de senha deixa uma entrada no log de auditoria, como a edição do usuário
+		# (views/edit.py:317). O objeto é o usuário cuja senha mudou (self.obj; na rota da própria senha,
+		# o próprio ator) e a mensagem é um texto fixo: nunca a senha nem o valor guardado dela (o hash).
+		# Sem try: o AuditLog._log já engole a falha da gravação da entrada (auditlog.py:25-34) e a troca
+		# já foi gravada pelo form.save() que vem antes.
+		self.log('update', _('Changed %s.') % 'password', self.obj)
+
 	@filter_hook
 	def form_valid(self, form):
 		form.save()
+		self.log_password_change()
 		self.message_user(_('Password changed successfully.'), 'success')
 		return HttpResponseRedirect(self.model_admin_url('change', self.obj.pk))
 
@@ -206,11 +215,18 @@ class ChangePasswordView(ModelAdminView):
 	def form_invalid(self, form):
 		return self.get_response()
 
+	def _raise_if_missing(self, object_id):
+		# mesma ordem das outras views de objeto (views/delete.py, views/edit.py): permissão, depois 404
+		if self.obj is None:
+			raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {
+				'name': smart_str(self.opts.verbose_name), 'key': escape(object_id)})
+
 	@csrf_protect_m
 	def get(self, request, object_id):
 		self.obj = self.get_object(unquote(object_id))
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 		self.form = self.get_form(self.obj)
 		return self.get_response()
 
@@ -220,6 +236,7 @@ class ChangePasswordView(ModelAdminView):
 		self.obj = self.get_object(unquote(object_id))
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 		return self.post_response()
 
 	def get_media(self):
@@ -281,6 +298,7 @@ class ChangeAccountPasswordView(ChangePasswordView):
 	@filter_hook
 	def form_valid(self, form):
 		form.save()
+		self.log_password_change()
 		self.message_user(_('Password changed successfully.'), 'success')
 		return HttpResponseRedirect(self.get_admin_url('index'))
 

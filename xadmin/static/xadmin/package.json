@@ -13,7 +13,6 @@
     "bootstrap-timepicker": ">=0.5.2",
     "clockpicker": ">=0.0.7",
     "datejs": "datejs/Datejs",
-    "flot": ">=3.2.9",
     "html5sortable": "lukasoppermann/html5sortable",
     "jquery": "^3.4.1",
     "jquery-ui": ">=1.12.1",

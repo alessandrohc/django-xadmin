@@ -256,7 +256,7 @@ class ExportActionTests(TestCase):
         """The 3.x parameter name, kept on purpose.
 
         The modal stopped emitting `file_format` in 4.x, but the view still accepts the
-        old name so a hand-built or bookmarked export URL keeps working. This test is
+        old name so a hand-built or browser-saved export URL keeps working. This test is
         what stops that compatibility from being removed by accident.
         """
         self.assert_served_a_file('_action_=export&file_format=0&scope=all')

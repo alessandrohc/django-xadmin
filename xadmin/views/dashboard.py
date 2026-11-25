@@ -3,20 +3,19 @@ import copy
 
 from django import forms
 from django.apps import apps
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models.base import ModelBase
 from django.forms.forms import DeclarativeFieldsMetaclass
 from django.forms.utils import flatatt
-from django.http import Http404
+from django.http import Http404, HttpResponseBadRequest
 from django.template import loader
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
 from django.urls.base import reverse, NoReverseMatch
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str, smart_str
-from django.utils.html import escape
+from django.utils.html import escape, format_html, format_html_join
 from urllib.parse import urlencode
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
 from django.views.decorators.cache import never_cache
 
@@ -24,7 +23,7 @@ from xadmin import widgets as exwidgets
 from crispy_forms.helper import FormHelper
 from xadmin.models import UserSettings, UserWidget
 from xadmin.sites import site
-from xadmin.util import unquote
+from xadmin.util import parse_pk, unquote
 from xadmin.views.base import CommAdminView, ModelAdminView, filter_hook, csrf_protect_m
 from xadmin.views.edit import CreateAdminView
 from xadmin.views.list import ListAdminView
@@ -41,14 +40,14 @@ class WidgetTypeSelect(forms.Widget):
 			value = ''
 		final_attrs = self.build_attrs(attrs, extra_attrs={'name': name})
 		final_attrs['class'] = 'nav nav-pills flex-column'
-		output = ['<ul%s>' % flatatt(final_attrs)]
 		options = self.render_options(force_str(value), final_attrs['id'])
+		# o valor volta de um envio recusado (POST) ou da query string (GET): o format_html escapa
+		# o id, o name e o valor, e o HTML todo é montado de pedaços já seguros, sem mark_safe (#8989)
+		hidden = format_html('<input type="hidden" id="{}_input" name="{}" value="{}"/>',
+		                     final_attrs['id'], name, force_str(value))
 		if options:
-			output.append(options)
-		output.append('</ul>')
-		output.append('<input type="hidden" id="%s_input" name="%s" value="%s"/>' %
-		              (final_attrs['id'], name, force_str(value)))
-		return mark_safe('\n'.join(output))
+			return format_html('<ul{}>\n{}\n</ul>\n{}', flatatt(final_attrs), options, hidden)
+		return format_html('<ul{}>\n</ul>\n{}', flatatt(final_attrs), hidden)
 
 	def render_option(self, selected_choice, widget, id):
 		is_active = widget.widget_type == selected_choice
@@ -62,11 +61,10 @@ class WidgetTypeSelect(forms.Widget):
 		})
 
 	def render_options(self, selected_choice, id):
-		# Normalize to strings.
-		output = []
-		for widget in self._widgets:
-			output.append(self.render_option(selected_choice, widget, id))
-		return '\n'.join(output)
+		# cada opção já é texto seguro (render_to_string do template com autoescape): o
+		# format_html_join as junta sem escapar de novo e devolve texto seguro
+		return format_html_join('\n', '{}', (
+			(self.render_option(selected_choice, widget, id),) for widget in self._widgets))
 
 
 class UserWidgetAdmin:
@@ -135,7 +133,9 @@ class UserWidgetAdmin:
 
 	def update_dashboard(self, obj):
 		try:
-			portal_pos = UserSettings.objects.get(
+			# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última gravada, a que o
+			# `get_widgets` lê (#8983)
+			portal_pos = UserSettings.get_latest(
 				user=obj.user, key="dashboard:%s:pos" % obj.page_id)
 		except UserSettings.DoesNotExist:
 			return
@@ -157,6 +157,14 @@ class UserWidgetAdmin:
 site.register(UserWidget, UserWidgetAdmin)
 
 
+class UnknownWidgetType(KeyError):
+	"""O tipo de widget que nenhum `@widget_manager.register` registrou (o de uma linha salva por um plugin que saiu do pacote).
+
+	É um `KeyError` de propósito: o `get_widgets` a captura como `LookupError` para apagar o widget órfão (AC-9054-8 e -15), e o
+	`Dashboard.post` a captura sozinha, sem engolir o `PermissionDenied` nem o `WidgetDataError` (#9088).
+	"""
+
+
 class WidgetManager:
 	_widgets = None
 
@@ -168,7 +176,10 @@ class WidgetManager:
 		return widget_class
 
 	def get(self, name):
-		return self._widgets[name]
+		try:
+			return self._widgets[name]
+		except KeyError:
+			raise UnknownWidgetType(name) from None
 
 	def get_widgets(self, page_id):
 		return self._widgets.values()
@@ -325,8 +336,22 @@ class ModelChoiceField(forms.ChoiceField):
 	def to_python(self, value):
 		if isinstance(value, ModelBase):
 			return value
-		app_label, model_name = value.lower().split('.')
-		return apps.get_model(app_label, model_name)
+		# o valor vem do POST (#8987): ausente ou vazio cai no «obrigatório» do Field.clean; o que não tem
+		# a forma `app.model` e o que não é um modelo do Django são recusas do campo, não exceções soltas
+		if value in self.empty_values:
+			return ''
+		try:
+			app_label, model_name = str(value).lower().split('.')
+		except ValueError:
+			raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice',
+			                      params={'value': value})
+		try:
+			return apps.get_model(app_label, model_name)
+		except LookupError:
+			# rótulo bem formado de um app ou modelo que não existe: o código próprio deixa o get_widgets
+			# (o `except WidgetDataError` dele, neste arquivo) apagar o widget salvo, como o LookupError fazia
+			raise ValidationError(self.error_messages['invalid_choice'], code='unknown_model',
+			                      params={'value': value})
 
 	def prepare_value(self, value):
 		if isinstance(value, ModelBase):
@@ -577,9 +602,13 @@ class Dashboard(CommAdminView):
 					continue
 			portal.append(portal_col)
 
-		UserSettings(
-			user=self.user, key="dashboard:%s:pos" % self.get_page_id(),
-			value='|'.join([','.join([str(w.id) for w in col]) for col in portal])).save()
+		# duas primeiras aberturas do painel ao mesmo tempo (#9083): `save_for_user` trava a linha do usuário antes de criar
+		# a posição, e a linha que a outra abertura criou no meio do caminho é atualizada em vez de criar uma segunda; vence
+		# a última requisição, e as aberturas seguintes listam os widgets dela. Num banco legado com duas linhas atualiza
+		# todas (o `update_or_create` levantaria `MultipleObjectsReturned`)
+		UserSettings.save_for_user(
+			self.user, "dashboard:%s:pos" % self.get_page_id(),
+			'|'.join([','.join([str(w.id) for w in col]) for col in portal]))
 
 		return portal
 
@@ -587,7 +616,9 @@ class Dashboard(CommAdminView):
 	def get_widgets(self):
 
 		if self.widget_customiz:
-			portal_pos = UserSettings.objects.filter(user=self.user, key=self.get_portal_key())
+			# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última gravada (#8983), a
+			# mesma que as edições da posição alteram
+			portal_pos = UserSettings.objects.filter(user=self.user, key=self.get_portal_key()).order_by('-pk')
 			if len(portal_pos):
 				portal_pos = portal_pos[0].value
 				widgets = []
@@ -605,6 +636,14 @@ class Dashboard(CommAdminView):
 										ws.append(self.get_widget(widget))
 									except LookupError:
 										# remove invalid widget
+										widget.delete()
+									except WidgetDataError as e:
+										# o modelo do widget não existe mais (#8987): o campo recusa com o código
+										# `unknown_model` e a limpeza que o LookupError fazia continua; outro dado
+										# inválido sobe para o `except Exception` de baixo, que só loga (o widget
+										# fica no banco, como antes)
+										if not e.widget.has_error('model', 'unknown_model'):
+											raise
 										widget.delete()
 							except Exception as e:
 								import logging
@@ -645,8 +684,26 @@ class Dashboard(CommAdminView):
 	def post(self, request, *args, **kwargs):
 		if 'id' in request.POST:
 			widget_id = request.POST['id']
+			# The id comes straight from the POST (#8930): a value the key field of the widget
+			# does not convert is a 400, on save and on delete, before anything is read or changed.
+			try:
+				parse_pk(UserWidget, widget_id)
+			except ValueError:
+				return HttpResponseBadRequest()
 			if request.POST.get('_delete', None) != 'on':
-				widget = self.get_widget(widget_id, request.POST.copy())
+				try:
+					widget = self.get_widget(widget_id, request.POST.copy())
+				except WidgetDataError:
+					# os dados vêm do POST (#8987): o formulário do tipo do widget os recusou
+					return HttpResponseBadRequest()
+				except UnknownWidgetType:
+					# o tipo salvo no widget deixou de existir no pacote (o `bookmark` e o `chart` do #9054, por exemplo): não há
+					# o que gravar. Responde a página da rota como o GET, que o `get_widgets` monta sem o widget (e apaga o que a
+					# posição lista) (#9088)
+					return self.get(request)
+				if widget is None:
+					# not a widget of this user on this page: unknown, or somebody else's
+					raise Http404
 				widget.save()
 			else:
 				try:
@@ -654,8 +711,10 @@ class Dashboard(CommAdminView):
 						user=self.user, page_id=self.get_page_id(), id=widget_id)
 					widget.delete()
 					try:
-						portal_pos = UserSettings.objects.get(user=self.user,
-						                                      key="dashboard:%s:pos" % self.get_page_id())
+						# num banco ainda sem a 0005 (#8982) a chave pode ter mais de uma linha: vale a última
+						# gravada (#8983)
+						portal_pos = UserSettings.get_latest(user=self.user,
+						                                     key="dashboard:%s:pos" % self.get_page_id())
 						pos = [[w for w in col.split(',') if w != str(
 							widget_id)] for col in portal_pos.value.split('|')]
 						portal_pos.value = '|'.join([','.join(col) for col in pos])

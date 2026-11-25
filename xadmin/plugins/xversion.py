@@ -15,14 +15,15 @@ import re
 from crispy_forms.utils import TEMPLATE_PACK
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import PermissionDenied, FieldDoesNotExist
+from django.core.exceptions import BadRequest, PermissionDenied, FieldDoesNotExist
 from django.db import models
 from django.db.models.query import QuerySet
 from django.forms.models import model_to_dict
-from django.http import HttpResponseRedirect
+from django.http import Http404, HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.utils.encoding import force_str, smart_str
+from django.utils.html import escape
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _, gettext_lazy as _lazy
 
@@ -36,7 +37,8 @@ from xadmin.plugins.actions import BaseActionView
 from xadmin.plugins.inline import InlineModelAdmin
 from xadmin.plugins.utils import OrderedDefaultDict
 from xadmin.sites import site, AdminPath
-from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts
+from xadmin.util import unquote, quote, is_related_field2, is_related_remote_field, is_related_field, get_model_opts, \
+	parse_pk
 from xadmin.views import BaseAdminPlugin, ModelAdminView, CreateAdminView, UpdateAdminView, DetailAdminView, \
 	ModelFormAdminView, DeleteAdminView, ListAdminView
 from xadmin.views.base import csrf_protect_m, filter_hook
@@ -427,12 +429,19 @@ class RevisionListView(BaseReversionView):
 		})
 		return context
 
+	def _raise_if_missing(self, object_id):
+		# mesma ordem das outras views de objeto (views/delete.py, views/edit.py): permissão, depois 404
+		if self.obj is None:
+			raise Http404(_('%(name)s object with primary key %(key)r does not exist.') % {
+				'name': force_str(self.opts.verbose_name), 'key': escape(object_id)})
+
 	def get(self, request, object_id, *args, **kwargs):
 		object_id = unquote(object_id)
 		self.obj = self.get_object(object_id)
 
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 
 		return self.get_response()
 
@@ -613,6 +622,7 @@ class RevisionListView(BaseReversionView):
 
 		if not self.has_change_permission(self.obj):
 			raise PermissionDenied
+		self._raise_if_missing(object_id)
 
 		params = self.request.POST
 		if 'version_a' not in params or 'version_b' not in params:
@@ -626,8 +636,22 @@ class RevisionListView(BaseReversionView):
 			self.message_user(_("Please select two different versions."), 'error')
 			return self.get_response()
 
-		version_a = get_object_or_404(Version, pk=version_a_id)
-		version_b = get_object_or_404(Version, pk=version_b_id)
+		# The ids come straight from the POST (#8930): one the key field of Version does not
+		# convert is a 400; one it converts but no version owns is the 404 below.
+		try:
+			parse_pk(Version, version_a_id)
+			parse_pk(Version, version_b_id)
+		except ValueError:
+			return HttpResponseBadRequest()
+
+		# só as versões do objeto da rota (#8988): a de outro objeto, ou de outro modelo, é 404, como a que
+		# ninguém tem; o modelo sem histórico no reversion levanta RegistrationError aqui e não tem versão de ninguém
+		try:
+			versions = Version.objects.get_for_object(self.obj)
+		except RegistrationError:
+			raise Http404
+		version_a = get_object_or_404(versions, pk=version_a_id)
+		version_b = get_object_or_404(versions, pk=version_b_id)
 
 		obj_a, detail_a = self.get_version_object(version_a)
 		obj_b, detail_b = self.get_version_object(version_b)
@@ -664,6 +688,24 @@ class BaseRevisionView(ModelFormAdminView):
 		return bool(self.has_add_permission() and
 		            self.has_change_permission() and
 		            self.has_delete_permission())
+
+	def get_version(self, versions, version_id):
+		"""A versão da rota dentro de `versions`: 400 se a chave da `Version` não converte o `version_id`, 404 se nenhuma a tem.
+
+		O `version_id` vem cru da rota (#9104): o que a chave não converte (`abc`, `1.5`, o byte NUL) estourava
+		`ValueError` no ORM e a rota respondia 500. O `init_request` roda no `setup`, antes do `dispatch`
+		(`xadmin/views/base.py:395-407`), então não devolve resposta: só levanta, e o 400 é um `BadRequest`.
+		Chame depois dos portões (permissão, objeto da rota, modelo sem histórico no reversion): o 403 e os 404
+		deles vêm antes do 400. O número que a chave converte e nenhuma versão tem, inclusive o fora do intervalo
+		do banco, passa daqui e dá o 404 do `get_object_or_404`.
+		"""
+		try:
+			parse_pk(Version, version_id)
+		except ValueError:
+			# mensagem interna, sem o valor recebido (o Django já loga o caminho da requisição, com o valor, como no
+			# 404: `django/core/handlers/exception.py:105-110`, Django 5.2.19)
+			raise BadRequest('Invalid version id') from None
+		return get_object_or_404(versions, pk=version_id)
 
 	@filter_hook
 	def get_revision(self):
@@ -711,7 +753,13 @@ class RevisionView(BaseRevisionView):
 
 		self.detail = self.get_model_view(DetailAdminView, self.model, object_id)
 		self.org_obj = self.detail.obj
-		self.version = get_object_or_404(Version, pk=version_id, object_id=smart_str(self.org_obj.pk))
+		# só as versões do objeto da rota (#9002): filtrar só por object_id deixava passar a versão de outro
+		# modelo com o mesmo pk; o modelo sem histórico no reversion levanta RegistrationError e não tem versão
+		try:
+			versions = Version.objects.get_for_object(self.org_obj)
+		except RegistrationError:
+			raise Http404
+		self.version = self.get_version(versions, version_id)
 
 		self.prepare_form()
 
@@ -769,7 +817,14 @@ class RecoverView(BaseRevisionView):
 		if not self.has_revision_permission():
 			raise PermissionDenied
 
-		self.version = get_object_or_404(Version, pk=version_id)
+		# só o que a lista de recuperação oferece (#9001): a última versão de cada objeto apagado deste modelo;
+		# a de objeto vivo, de outro modelo ou antiga de um apagado é 404; o modelo sem histórico no
+		# reversion levanta RegistrationError e não tem versão de ninguém
+		try:
+			deleted = Version.objects.get_deleted(self.model)
+		except RegistrationError:
+			raise Http404
+		self.version = self.get_version(deleted, version_id)
 		self.org_obj = self.version._object_version.object
 
 		self.prepare_form()

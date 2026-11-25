@@ -105,22 +105,6 @@ vendors = {
 			'production': 'xadmin/vendor/bootstrap-datepicker/js/bootstrap-datepicker.min.js',
 		}
 	},
-	"flot": {
-		"js": {
-			'dev': [
-				'xadmin/vendor/flot/js/jquery.canvaswrapper.js',
-				'xadmin/vendor/flot/js/jquery.flot.js',
-				'xadmin/vendor/flot/js/jquery.flot.drawSeries.js',
-				'xadmin/vendor/flot/js/jquery.colorhelpers.js',
-				'xadmin/vendor/flot/js/jquery.flot.browser.js',
-				'xadmin/vendor/flot/js/jquery.flot.uiConstants.js',
-				'xadmin/vendor/flot/js/jquery.flot.saturated.js',
-				'xadmin/vendor/flot/js/jquery.flot.pie.js',
-				'xadmin/vendor/flot/js/jquery.flot.time.js',
-				'xadmin/vendor/flot/js/jquery.flot.resize.js',
-				'xadmin/vendor/flot/js/jquery.flot.categories.js']
-		}
-	},
 	"image-gallery": {
 		"css": {
 			'dev': 'xadmin/vendor/blueimp-gallery/css/blueimp-gallery.css',

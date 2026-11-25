@@ -18,8 +18,7 @@ Four things made it worse than it reads:
 - ``ListAdminView.init_request`` only calls ``has_view_permission()``, which is ``view``
   OR ``change``. A read-only auditing role could dump every password hash, and
   ``is_superuser``, and any other column of any model.
-- The ``ajax`` plugin is active here (XADMIN_EXCLUDE_PLUGINS drops bookmark, topnav,
-  chart, relate, themes, export and portal -- not this one).
+- The ``ajax`` plugin is active here (the host's XADMIN_EXCLUDE_PLUGINS does not drop it).
 - An unknown field raised an unhandled AttributeError from
   ``views/list.py`` ``get_ordering_field`` -> HTTP 500, so the same parameter was also a
   one-GET denial of service for anyone with ``view``.

@@ -19,12 +19,6 @@ function nunjunksTask() {
 }
 
 
-function flotTask() {
-    return gulp.src(`${node_modules}/flot/source/*.js`)
-        .pipe(gulp.dest('vendor/flot/js'));
-
-}
-
 function micropluginTask() {
     return gulp.src(`${node_modules}/microplugin/src/*.js`)
         .pipe(gulp.dest('vendor/microplugin/js'));
@@ -104,7 +98,6 @@ exports.default = gulp.series(
     jqueryTask,
     popperjsTask,
     nunjunksTask,
-    flotTask,
     //sifterTask,
     //micropluginTask,
     fontAwesomeTask,

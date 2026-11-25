@@ -6,11 +6,14 @@ of only for display.
 """
 from xadmin.views.list import ResultHeader
 
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.http import Http404, HttpResponseBadRequest
 from django.template.loader import render_to_string
 
 from xadmin.plugins.utils import get_context_dict
 from xadmin.sites import site, AdminPath
+from xadmin.util import parse_pk, pk_fits, pk_range
 from xadmin.views import (
 	BaseAdminPlugin, ModelAdminView, ListAdminView
 )
@@ -68,14 +71,43 @@ class SortableListPlugin(BaseAdminPlugin):
 class SaveOrderView(ModelAdminView):
 	list_order_field_inverse = False
 
+	def init_request(self, *args, **kwargs):
+		# a rota é registrada para todo modelo e o `post` não conferia permissão nenhuma (#8984): o 403 sai
+		# aqui, no `setup` (`xadmin/views/base.py:395-406`), antes do `dispatch`, do 404 do modelo sem
+		# ordenação (#8986) e dos ids (#8930), como nas outras views de modelo (lista, excluir, alterar).
+		# `has_change_permission()` (`xadmin/views/base.py:749-750`) é o gancho que honra o
+		# `remove_permissions` do admin, que entra na view como classe-base (`xadmin/sites.py:519-546`):
+		# `user.has_perm` direto o ignoraria
+		if not self.has_change_permission():
+			raise PermissionDenied
+
 	@csrf_protect_m
 	@transaction.atomic
 	def post(self, request):
+		# a rota é registrada para todo modelo (no fim do arquivo), mas só o admin com `list_order_field`
+		# ordena (#8986): o mesmo teste do SortableListPlugin.init_request; vem antes da leitura e da
+		# validação dos ids, e o `Http404` não tem mensagem, como o dos ids logo abaixo
+		if not getattr(self, 'list_order_field', None):
+			raise Http404
 		order_objs = request.POST.getlist("order[]")
-		total_order_objs = len(order_objs)
+		# The ids come straight from the POST (#8930). Every one is converted by the key field
+		# before anything is saved: the 400 is a plain return, which does not roll the atomic
+		# block back, so a row saved before a bad id would stay saved.
+		try:
+			pks = [parse_pk(self.model, pk) for pk in order_objs]
+		except ValueError:
+			return HttpResponseBadRequest()
+		# Every id must be a row of the model, also checked before the first save. The `in`
+		# lookup does not check the column range (SQLite overflows), so a number the column
+		# cannot hold is left out of the query and counts as missing. A repeated id is one row.
+		limits = pk_range(self.model)
+		existing = set(self.model.objects.filter(
+			pk__in=[pk for pk in pks if pk_fits(pk, limits)]).values_list('pk', flat=True))
+		if existing != set(pks):
+			raise Http404
+		total_order_objs = len(pks)
 
-		for index, pk in enumerate(order_objs):
-			pk = int(pk)
+		for index, pk in enumerate(pks):
 			if self.list_order_field_inverse:
 				order_value = total_order_objs - index
 			else:

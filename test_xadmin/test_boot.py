@@ -116,9 +116,34 @@ class ExcludePluginsContractTests(SimpleTestCase):
         """Control case: excluding an ordinary plugin must be harmless."""
         result = run_in_fresh_interpreter(
             "print('SETUP-OK')",
-            settings_extra="XADMIN_EXCLUDE_PLUGINS=['chart'],")
+            settings_extra="XADMIN_EXCLUDE_PLUGINS=['refresh'],")
         self.assertIn('SETUP-OK', result.stdout,
                       msg='stderr:\n{0}'.format(result.stderr))
+
+    # a lista de `XADMIN_EXCLUDE_PLUGINS` do produto (`plus_base/settings/publique.py:624-632`); cinco destes nomes
+    # (`bookmark`, `topnav`, `chart`, `relate`, `portal`) deixam de existir no pacote, e a lista segue valendo
+    PRODUCT_EXCLUDE = ['bookmark', 'topnav', 'chart', 'relate', 'themes', 'export', 'portal']
+    # os plugins que o pacote mantém, menos os dois da lista do produto que ainda existem (`themes` e `export`)
+    LOADED_WITH_PRODUCT_EXCLUDE = (
+        'actions', 'filters', 'refresh', 'details', 'ajax', 'relfield', 'dependent', 'inline', 'quickform', 'wizard',
+        'images', 'auth', 'multiselect', 'passwords', 'sitemenu', 'language', 'sortablelist', 'importexport',
+        'xversion', 'csrf_meta')
+
+    def test_the_product_exclusion_list_boots_and_loads_the_other_plugins(self):
+        """AC-9054-7: com a exclusão do produto o xadmin sobe sem erro e carrega os demais plugins."""
+        result = run_in_fresh_interpreter("""
+            import sys
+            loaded = sorted(name.rsplit('.', 1)[-1] for name in sys.modules if name.startswith('xadmin.plugins.'))
+            print('LOADED', ','.join(loaded))
+        """, settings_extra='XADMIN_EXCLUDE_PLUGINS=%r,' % (self.PRODUCT_EXCLUDE,))
+        self.assertEqual(result.returncode, 0,
+                         msg='the product exclusion list must not break the boot. stderr:\n{0}'.format(result.stderr))
+        # pré-condição positiva: o script chegou ao fim e listou os módulos carregados
+        self.assertIn('LOADED', result.stdout, msg='stderr:\n{0}'.format(result.stderr))
+        loaded = set(result.stdout.split('LOADED')[1].split()[0].split(','))
+        for name in self.LOADED_WITH_PRODUCT_EXCLUDE:
+            with self.subTest(plugin=name):
+                self.assertIn(name, loaded, msg='the plugin must load with the product exclusion list')
 
     def test_excluding_xversion_does_not_break_boot(self):
         """The defect itself."""
